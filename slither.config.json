@@ -1,0 +1,4 @@
+{
+  "filter_paths": "lib/|test/|script/|contracts/TransactionVerifier.sol",
+  "exclude_informational": true
+}

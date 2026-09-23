@@ -1,0 +1,44 @@
+{
+  "name": "shielded-pool",
+  "version": "1.0.0",
+  "description": "STELX: a shielded pool for Robinhood Chain.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "scripts": {
+    "test:vectors": "node test/vectors.check.mjs",
+    "test:client": "node --test test/client.test.ts",
+    "test:deepindex": "node --test test/deepindex.test.ts",
+    "test:contracts": "forge test",
+    "test": "npm run test:vectors && npm run test:client && npm run test:zka01 && npm run test:scan429 && npm run test:scanretry && npm run test:deepindex && npm run test:contracts && npm run test:multiasset && npm run test:seam && npm run test:e2e && npm run test:broadcaster",
+    "prove:smoke": "node test/prover.smoke.ts",
+    "test:proofs": "forge test --match-contract ProofIntegration",
+    "test:e2e": "node --test test/e2e.test.ts",
+    "test:broadcaster": "node --test test/broadcaster.test.ts",
+    "broadcaster": "node broadcaster/server.ts",
+    "perf:cold-start": "node test/perf.cold-start.ts 500",
+    "test:zka01": "node --test test/zka01.test.ts",
+    "test:multiasset": "node --test test/multiasset.test.ts",
+    "test:seam": "node --test test/seam.multiasset.test.ts",
+    "test:relayload": "node test/relay/e1-concurrency.ts && node test/relay/e3b-transient.ts",
+    "test:scan429": "node --test test/scan429.test.ts",
+    "test:scanretry": "node --test test/scanretry.test.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@noble/ciphers": "^1.2.1",
+    "@noble/curves": "^1.8.1",
+    "@noble/hashes": "^1.7.1",
+    "@scure/bip32": "^1.6.2",
+    "@scure/bip39": "^1.4.0",
+    "circomlib": "^2.0.5",
+    "circomlibjs": "^0.1.7",
+    "snarkjs": "^0.7.6",
+    "viem": "^2.21.55"
+  }
+}
