@@ -154,3 +154,48 @@ test("a chain that is briefly shorter than the last scan does not fail the scan"
   assert.equal(res.leaves, 1);
   assert.equal(await w.getBalance(TOKEN), 100n);
 });
+
+test("a reorg just after the previous checkpoint is checked is still caught", async () => {
+  const { shield, exit, root } = await mine();
+  let fork = 0, head = 1000n, armed = false;
+  const client = {
+    getBlockNumber: async () => head,
+    getBlock: async ({ blockNumber }: any) => {
+      const hash = hashAt(fork, blockNumber);
+      // The exit is dropped right after the start of the second scan checks block 1000.
+      if (armed && blockNumber === 1000n) { fork = 1; armed = false; }
+      return { hash };
+    },
+    getLogs: async (q: any) => inRange(fork === 0 ? [shield, exit] : [shield], q),
+    readContract: async ({ functionName }: any) => (functionName === "merkleRoot" ? root : 1n),
+  } as any;
+  const w = await Wallet.create(MNEMONIC, cfgFor(client, undefined));
+  await w.scan();
+  assert.equal(await w.getBalance(TOKEN), 0n);
+  head = 1100n; armed = true;
+  await w.scan();
+  assert.equal(await w.getBalance(TOKEN), 100n);
+});
+
+test("an RPC failure during the final check keeps the checkpoints for the next scan", async () => {
+  const { shield, exit, root } = await mine();
+  let fork = 0, failed = false;
+  const client = {
+    getBlockNumber: async () => 1000n,
+    getBlock: async ({ blockNumber }: any) => {
+      // Block 100 is read on the old branch before its logs; the first read on the new branch is the final check.
+      if (fork === 1 && blockNumber === 100n && !failed) { failed = true; throw new Error("fetch failed"); }
+      return { hash: hashAt(fork, blockNumber) };
+    },
+    getLogs: async (q: any) => {
+      const out = inRange(fork === 0 ? [shield, exit] : [shield], q);
+      if (q.fromBlock === 1n) fork = 1;
+      return out;
+    },
+    readContract: async ({ functionName }: any) => (functionName === "merkleRoot" ? root : 1n),
+  } as any;
+  const w = await Wallet.create(MNEMONIC, cfgFor(client, 100n));
+  await assert.rejects(w.scan(), /fetch failed/);
+  await w.scan();
+  assert.equal(await w.getBalance(TOKEN), 100n);
+});

@@ -15,7 +15,7 @@ const PINNED = {
   "client/src/note.ts": "83c6960056dfb734cdac7d4ba92903d2ca33a1620549cecd279e1861c8305f7e",
   "client/src/prover.ts": "45d48c1ed1cc9fd8728343b49f05d78d9ce1d6f92a253de3bacbd3f6dcd422e5",
   "client/src/tree.ts": "723920895c6d62bb37ed20c121b1cf070f122e5743d1a4f8012c1082ae1214ff",
-  "client/src/wallet.ts": "8142c98d61b30d0cbb0046d7d308bafeefba9549fafe4281fd63b3ab5d189282",
+  "client/src/wallet.ts": "d8538125f2f3d70761888b274fe798fc35a22a241eceeab434eb03b367c1f4b8",
   "broadcaster/server.ts": "24baa46c842ff0286439ed90b2f6f29b2c7fe46bfa92e1351cc9df526f8e5d98",
 };
 

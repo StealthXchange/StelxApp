@@ -133,8 +133,9 @@ export class Wallet {
   // higher logIndex) is always ingested after it and must skip them.
   private droppedCommitments = new Set<string>();
   private scannedTo = 0n;
-  /** Hash of block scannedTo, read before its logs. A different hash later means a reorg. */
-  private scannedHash: Hex | null = null;
+  /** [block, hash read before that range's logs] for every range ingested since the last full
+   *  check; the last is scannedTo. A reorg at or below one changes its hash or removes the block. */
+  private checkpoints: [bigint, Hex | null][] = [];
   private viewOnly: boolean;
 
   private constructor(keys: WalletKeys, cfg: WalletConfig, viewOnly: boolean) {
@@ -177,21 +178,16 @@ export class Wallet {
     this.tree = await MerkleTree.create();
     this.notes = []; this.history = [];
     this.seenNullifiers = new Map(); this.droppedCommitments = new Set();
-    this.scannedTo = 0n; this.scannedHash = null;
+    this.scannedTo = 0n; this.checkpoints = [];
   }
 
   private async scanOnce(attempt = 0): Promise<{ leaves: number; owned: number; unspent: number }> {
     const latest = await this.cfg.client.getBlockNumber({ cacheTime: 0 });
-    // A reorg at or below scannedTo changes its hash, or removes the block: rebuild rather than
-    // keep state from a dropped branch.
-    if (this.scannedTo !== 0n) {
-      const h = await this.blockHash(this.scannedTo);
-      if (h === null || h !== this.scannedHash) await this.reset();
-    }
+    // Rebuild rather than keep state from a dropped branch.
+    if (!(await this.checkpointsHold())) await this.reset();
     const chunk = this.cfg.logChunk;
     let from = this.scannedTo === 0n ? this.cfg.deployBlock : this.scannedTo + 1n;
 
-    const committed: [bigint, Hex | null][] = [];
     // Skip when nothing is new; not every RPC accepts fromBlock > toBlock.
     while (from <= latest) {
       const to = chunk === undefined || from + chunk - 1n > latest ? latest : from + chunk - 1n;
@@ -200,8 +196,7 @@ export class Wallet {
       const logs = await this.fetchLogs(from, to);
       await this.ingestAll(logs);
       // Commit per range so a retry after a failed call does not re-ingest.
-      this.scannedTo = to; this.scannedHash = hash;
-      committed.push([to, hash]);
+      this.scannedTo = to; this.checkpoints.push([to, hash]);
       from = to + 1n;
     }
 
@@ -217,16 +212,15 @@ export class Wallet {
       await this.reset();
       throw new Error(msg);
     }
-    // A reorg during this scan into a range already read leaves a later boundary consistent but
-    // that range stale: every boundary committed here must still hold.
-    for (const [n, hash] of committed) {
-      const now = await this.blockHash(n);
-      if (now === null || now !== hash) {
-        await this.reset();
-        if (attempt >= 2) throw new Error(`chain reorganised during the scan at block ${n}`);
-        return this.scanOnce(attempt + 1);
-      }
+    // Again after reading: a reorg during the scan can land in a range already read, after its
+    // checkpoint, where a later checkpoint read on the new branch would not show it.
+    if (!(await this.checkpointsHold())) {
+      await this.reset();
+      if (attempt >= 2) throw new Error("chain reorganised during the scan");
+      return this.scanOnce(attempt + 1);
     }
+    // All held, so the last alone now covers every block below it.
+    this.checkpoints = this.checkpoints.slice(-1);
     await this.refreshSpent();
 
     return {
@@ -263,6 +257,15 @@ export class Wallet {
       ? Number(a.logIndex) - Number(b.logIndex)
       : (a.blockNumber < b.blockNumber ? -1 : 1));
     return logs;
+  }
+
+  /** Kept on a throw, so the next scan checks the same blocks. */
+  private async checkpointsHold(): Promise<boolean> {
+    for (const [n, hash] of this.checkpoints) {
+      const now = await this.blockHash(n);
+      if (now === null || now !== hash) return false;
+    }
+    return true;
   }
 
   /** Null when the chain has no block at that height, as after a reorg to a shorter branch. */
