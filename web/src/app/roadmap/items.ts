@@ -20,12 +20,13 @@ export interface Note {
   text: string;
 }
 
-export type CategoryId = "privacy" | "payments" | "protocol";
+export type CategoryId = "privacy" | "payments" | "protocol" | "token";
 
 export const CATEGORIES: { id: CategoryId; name: string; line: string }[] = [
   { id: "privacy", name: "Privacy", line: "Safer, more private, easier to check." },
   { id: "payments", name: "Payments", line: "Moving money, and bringing people in." },
   { id: "protocol", name: "Protocol", line: "The engine, and the big bets." },
+  { id: "token", name: "STELX token", line: "What STELX is for. Privacy itself is never charged in STELX." },
 ];
 
 export const DEVS: Dev[] = ["Rome", "Kaka", "Eddy"];
@@ -158,24 +159,32 @@ export const ITEMS: Item[] = [
     notes: [{date: "24 Sep",by: "Rome",text: "outside reviewer found a few scanner edge cases (rpc dropping mid scan, reorgs). fixed, auditor signed off, live. rest of v2 goes to the auditor as one batch, not bit by bit"}],
   },
   {
-    id: "token-pool", cat: "protocol", status: "next", dev: "Kaka",
-    title: "STELX token pool", line: "Hold STELX privately. Relay fees in STELX.",
-    milestones: [["Token check", false], ["Pool deployed", false], ["Relay fees in STELX", false], ["Live", false]],
-  },
-  {
     id: "sdk", cat: "protocol", status: "next", dev: "Eddy",
     title: "SDK", line: "Other apps add private balances.",
     milestones: [["API", false], ["Docs and examples", false], ["Published", false]],
   },
   {
-    id: "relays", cat: "protocol", status: "later", dev: "Kaka",
-    title: "Relay network", line: "Anyone can run a relay and earn fees.",
-    milestones: [["Design", false], ["Staking", false], ["Live", false]],
-  },
-  {
     id: "swaps", cat: "protocol", status: "later", dev: "Rome",
     title: "Private swaps", line: "Trade stocks without leaving the pool.",
     milestones: [["Liquidity check", false], ["New pool design", false], ["Audit", false], ["Live", false]],
+  },
+
+  {
+    id: "token-pool", cat: "token", status: "building", dev: "Kaka",
+    title: "STELX pool", line: "Hold and send STELX privately, in its own audited pool.",
+    milestones: [["Token checked", true], ["Pool built and tested on a mainnet copy", true], ["Deployed", false], ["Relay for STELX sends", false], ["Live", false]],
+    notes: [{ date: "24 Sep", by: "Kaka", text: "pool built. same contract, circuit and wallet as the main pool byte for byte, so the audit and ceremony carry over. token has no tax, pause, blacklist or owner. deposit, private send and withdraw all passed with the real token on a mainnet copy. next: deploy and its relay" }],
+  },
+  {
+    id: "stelx-drops", cat: "token", status: "next", dev: "Rome",
+    title: "STELX giveaways", line: "Fastest-fingers gift links and community drops, paid in STELX.",
+    milestones: [["First fastest-fingers gift", true], ["STELX pool live", false], ["First STELX drop", false]],
+    notes: [{ date: "24 Sep", by: "Rome", text: "first fastest fingers gift on X, $10 in WETH. claimed in about 5 min. next ones in STELX once its pool is live" }],
+  },
+  {
+    id: "relays", cat: "token", status: "later", dev: "Kaka",
+    title: "Stake STELX to run a relay", line: "Anyone can run a relay by staking STELX and earn from every pool. Cheat and lose the stake.",
+    milestones: [["Design", false], ["Staking contract", false], ["Audit", false], ["Live", false]],
   },
 ];
 
