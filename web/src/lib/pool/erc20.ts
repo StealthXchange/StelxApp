@@ -12,19 +12,46 @@ export const WETH_ABI = parseAbi([
   "function allowance(address owner, address spender) view returns (uint256)",
 ]);
 
+export interface BrowserWallet { id: string; name: string; icon: string; provider: any }
+
+const found = new Map<string, BrowserWallet>();
+const listeners = new Set<(w: BrowserWallet[]) => void>();
+let chosen: any = null;
+
+if (typeof window !== "undefined") {
+  window.addEventListener("eip6963:announceProvider", (e: any) => {
+    const { info, provider } = e.detail ?? {};
+    if (!info?.uuid || !provider) return;
+    const id = info.rdns || info.uuid;
+    found.set(id, { id, name: String(info.name ?? "Wallet"), icon: String(info.icon ?? ""), provider });
+    for (const l of listeners) l([...found.values()]);
+  });
+  window.dispatchEvent(new Event("eip6963:requestProvider"));
+}
+
+export function watchWallets(cb: (w: BrowserWallet[]) => void): () => void {
+  listeners.add(cb);
+  cb([...found.values()]);
+  window.dispatchEvent(new Event("eip6963:requestProvider"));
+  return () => { listeners.delete(cb); };
+}
+
 function injected(): any {
-  const eth = (globalThis as any).ethereum;
+  const eth = chosen ?? (found.size === 1 ? [...found.values()][0].provider : (globalThis as any).ethereum);
   if (!eth) throw new Error("No wallet extension found in this browser.");
   return eth;
 }
 
 export function hasWallet(): boolean {
-  return typeof globalThis !== "undefined" && Boolean((globalThis as any).ethereum);
+  return typeof globalThis !== "undefined" && (found.size > 0 || Boolean((globalThis as any).ethereum));
 }
 
-export async function connect(): Promise<Address> {
-  const eth = injected();
+export async function connect(id?: string): Promise<Address> {
+  const picked = id ? found.get(id)?.provider : null;
+  if (id && !picked) throw new Error("That wallet is no longer available. Reload the page and try again.");
+  const eth = picked ?? injected();
   const [account] = await eth.request({ method: "eth_requestAccounts" });
+  chosen = eth;
   return account as Address;
 }
 

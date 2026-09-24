@@ -6,8 +6,8 @@ import { type Address } from "viem";
 import { AlertTriangle, CheckCircle } from "@/components/icons";
 import { FAUCETS, IS_MAINNET, POOL_CHAIN_ID, txUrl } from "@/lib/pool/config";
 import {
-  approve, connect, currentChainId, ensureChain, GAS_RESERVE, hasWallet, readReadiness, submitSelf, wrap,
-  type DepositReadiness,
+  approve, connect, currentChainId, ensureChain, GAS_RESERVE, hasWallet, readReadiness, submitSelf, watchWallets, wrap,
+  type BrowserWallet, type DepositReadiness,
 } from "@/lib/pool/erc20";
 import { refresh, walletFor } from "@/lib/pool/walletStore";
 import { usePoolHealth } from "@/lib/pool/health";
@@ -43,6 +43,9 @@ export default function ShieldPage() {
   const [quiet, setQuiet] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [wallets, setWallets] = useState<BrowserWallet[]>([]);
+
+  useEffect(() => watchWallets(setWallets), []);
 
   const isWeth = asset === WETH;
   const parsed = parseAmount(amount, asset, multiplier);
@@ -64,10 +67,10 @@ export default function ShieldPage() {
     setAmount(a === WETH ? DEFAULT_AMOUNT : "");
   }
 
-  async function doConnect() {
+  async function doConnect(walletId?: string) {
     setError(null);
     try {
-      const a = await connect();
+      const a = await connect(walletId);
       setAccount(a);
       const id = await currentChainId();
       setChainOk(id === POOL_CHAIN_ID);
@@ -168,9 +171,20 @@ export default function ShieldPage() {
             <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--text-mid)", margin: 0 }}>
               Your normal Ethereum wallet, not your pool wallet. It pays for the deposit and shows on chain.
             </p>
-            <button className="btn" style={{ alignSelf: "flex-start" }} disabled={!hasWallet()} onClick={doConnect}>
-              {hasWallet() ? "Connect wallet" : "No wallet extension detected"}
-            </button>
+            {wallets.length > 1 ? (
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {wallets.map((w) => (
+                  <button key={w.id} className="btn" style={{ display: "inline-flex", alignItems: "center", gap: 8 }} onClick={() => doConnect(w.id)}>
+                    {w.icon && <img src={w.icon} alt="" width={18} height={18} style={{ borderRadius: 4 }} />}
+                    {w.name}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <button className="btn" style={{ alignSelf: "flex-start" }} disabled={!wallets.length && !hasWallet()} onClick={() => doConnect(wallets[0]?.id)}>
+                {wallets.length || hasWallet() ? "Connect wallet" : "No wallet extension detected"}
+              </button>
+            )}
             {!IS_MAINNET && (
               <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--text-low)" }}>
                 Need ETH? Get some from{" "}
