@@ -188,3 +188,78 @@ export async function approve(account: Address, token: Address, amount: bigint):
 export async function submitSelf(account: Address, tx: { to: string; data: string }): Promise<Hex> {
   return sendAndWait(account, tx.to as Address, tx.data as Hex);
 }
+
+export interface Call { to: Address; data: Hex; value?: bigint }
+
+export const wrapCall = (amount: bigint): Call =>
+  ({ to: POOL_TOKEN, data: encodeFunctionData({ abi: WETH_ABI, functionName: "deposit" }), value: amount });
+
+export const approveCall = (token: Address, amount: bigint): Call =>
+  ({ to: token, data: encodeFunctionData({ abi: WETH_ABI, functionName: "approve", args: [poolAddress(), amount] }) });
+
+const refused = (e: any) => e?.code === 4001 || e?.data?.originalError?.code === 4001;
+
+async function canBatch(account: Address): Promise<boolean> {
+  const hex = `0x${POOL_CHAIN_ID.toString(16)}`;
+  try {
+    const caps = await injected().request({ method: "wallet_getCapabilities", params: [account, [hex]] });
+    const c = caps?.[hex] ?? caps?.[POOL_CHAIN_ID];
+    const s = c?.atomic?.status ?? (c?.atomicBatch?.supported ? "supported" : undefined);
+    return s === "supported" || s === "ready";
+  } catch {
+    return false;
+  }
+}
+
+async function sendBatch(account: Address, calls: Call[]): Promise<Hex> {
+  const eth = injected();
+  const res = await eth.request({
+    method: "wallet_sendCalls",
+    params: [{
+      version: "2.0.0",
+      chainId: `0x${POOL_CHAIN_ID.toString(16)}`,
+      from: account,
+      atomicRequired: true,
+      calls: calls.map((c) => ({ to: c.to, data: c.data, value: `0x${(c.value ?? 0n).toString(16)}` })),
+    }],
+  });
+  const id = typeof res === "string" ? res : res?.id;
+  for (let i = 0; i < 180; i++) {
+    const s = await eth.request({ method: "wallet_getCallsStatus", params: [id] });
+    const status = s?.status;
+    if (status === 200 || status === "CONFIRMED") {
+      const hash = s.receipts?.at(-1)?.transactionHash as Hex | undefined;
+      if (!hash) throw new Error("Your wallet says it's done but gave no transaction. Check your wallet's activity.");
+      const receipt = await poolClient().waitForTransactionReceipt({ hash });
+      if (receipt.status !== "success") throw new Error("Transaction reverted on chain.");
+      return hash;
+    }
+    if (typeof status === "number" && status >= 400) throw new Error("The deposit didn't go through. Nothing was taken beyond gas.");
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  throw new Error("Still waiting on your wallet. Check its activity before trying again.");
+}
+
+export async function sendAll(account: Address, calls: Call[], onStep?: (i: number | "batch") => void): Promise<Hex> {
+  if (calls.length > 1 && await canBatch(account)) {
+    onStep?.("batch");
+    try {
+      return await sendBatch(account, calls);
+    } catch (e: any) {
+      if (refused(e)) throw new Error("You declined in your wallet.");
+
+      if (e?.code !== -32601 && e?.code !== 5700 && e?.code !== 5710 && e?.code !== -32602) throw e;
+    }
+  }
+  let hash: Hex = "0x";
+  for (const [i, c] of calls.entries()) {
+    onStep?.(i);
+    try {
+      hash = await sendAndWait(account, c.to, c.data, c.value ?? 0n);
+    } catch (e: any) {
+      if (refused(e)) throw new Error("You declined in your wallet.");
+      throw e;
+    }
+  }
+  return hash;
+}

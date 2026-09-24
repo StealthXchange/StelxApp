@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { type Address } from "viem";
+import { type Address, type Hex } from "viem";
 import { AlertTriangle, CheckCircle } from "@/components/icons";
 import { FAUCETS, IS_MAINNET, POOL_CHAIN_ID, txUrl } from "@/lib/pool/config";
 import {
-  approve, connect, currentChainId, ensureChain, GAS_RESERVE, hasWallet, readReadiness, submitSelf, watchWallets, wrap,
-  type BrowserWallet, type DepositReadiness,
+  approveCall, connect, currentChainId, ensureChain, GAS_RESERVE, hasWallet, readReadiness, sendAll, watchWallets, wrapCall,
+  type BrowserWallet, type Call, type DepositReadiness,
 } from "@/lib/pool/erc20";
 import { refresh, walletFor } from "@/lib/pool/walletStore";
 import { usePoolHealth } from "@/lib/pool/health";
@@ -83,21 +83,6 @@ export default function ShieldPage() {
     return () => clearTimeout(t);
   }, [busy]);
 
-  async function step(label: string, fn: () => Promise<string>) {
-    if (!poolOk) {
-      setError("The pool isn't reachable right now, so nothing was sent to your wallet.");
-      return;
-    }
-    setBusy(label); setError(null); setDone(null);
-    try {
-      const hash = await fn();
-      setDone(hash);
-      if (account) await reload(account, asset.address);
-    } catch (e: any) {
-      setError(String(e?.shortMessage ?? e?.details ?? e?.message ?? e));
-    } finally { setBusy(null); }
-  }
-
   const amountOk = Boolean(ready && parsed !== null && parsed > 0n);
   const short = Boolean(ready && parsed !== null && ready.balance < parsed);
 
@@ -109,13 +94,42 @@ export default function ShieldPage() {
   const wrapTooBig = Boolean(needsWrap && ready && wrapAmount > maxWrap);
   const needsApprove = Boolean(ready && parsed !== null && ready.allowance < parsed);
   const priced = isWeth || asset.kind !== "stock" || multiplier !== null;
-  const canShield = Boolean(pool.address && ready && priced && parsed && parsed > 0n && !short && !needsApprove);
   const fee = parsed !== null && parsed > 0n ? poolFee(parsed) : null;
+  const unit = isWeth ? "ETH" : asset.symbol;
+  const canDeposit = Boolean(poolOk && pool.address && ready && priced && parsed && parsed > 0n && !tooMuch && !wrapTooBig && busy === null);
   const depositLabel =
     health.status === "unconfigured" ? "Pool not live yet"
     : health.status === "unreachable" ? "Pool unreachable"
     : health.status === "checking" ? "Checking the pool…"
-    : busy === "shield" ? "Depositing…" : "Deposit";
+    : busy === "batch" ? "Confirm in your wallet…"
+    : busy === "wrap" ? "Wrapping…"
+    : busy === "approve" ? "Approving…"
+    : busy === "shield" ? "Depositing…"
+    : busy ? "Preparing…"
+    : `Deposit ${amount || ""} ${unit}`;
+
+  async function depositAll() {
+    if (!account || !ready || parsed === null) return;
+    if (!poolOk) { setError("The pool isn't reachable right now, so nothing was sent to your wallet."); return; }
+    setBusy("start"); setError(null); setDone(null);
+    try {
+      await ensureChain();
+      setChainOk(true);
+      const calls: Call[] = [];
+      const labels: string[] = [];
+      if (needsWrap) { calls.push(wrapCall(wrapAmount)); labels.push("wrap"); }
+      if (needsApprove) { calls.push(approveCall(asset.address, parsed)); labels.push("approve"); }
+      const built = await (await walletFor(asset.address)).buildShield(asset.address, parsed);
+      calls.push({ to: built.to as Address, data: built.data as Hex }); labels.push("shield");
+      setDone(await sendAll(account, calls, (i) => setBusy(i === "batch" ? "batch" : labels[i])));
+      await refresh();
+    } catch (e: any) {
+      setError(String(e?.shortMessage ?? e?.details ?? e?.message ?? e));
+    } finally {
+      setBusy(null);
+      await reload(account, asset.address);
+    }
+  }
 
   if (!pool.address) {
     return (
@@ -236,7 +250,7 @@ export default function ShieldPage() {
                     padding: "12px 14px", color: "var(--text-hi)", fontSize: 18, width: 200,
                   }}
                 />
-                <span style={{ fontSize: 15, color: "var(--text-mid)" }}>{asset.symbol}</span>
+                <span style={{ fontSize: 15, color: "var(--text-mid)" }}>{unit}</span>
                 {isWeth && QUICK_PICKS.map((v) => (
                   <button key={v} className="btn btn-ghost" style={{ minHeight: 32, padding: "0 12px", fontSize: 12.5 }} onClick={() => setAmount(String(v))}>
                     {v}
@@ -286,60 +300,28 @@ export default function ShieldPage() {
             </section>
 
             <section className="card" style={{ padding: "24px 26px", display: "flex", flexDirection: "column", gap: 16 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 650, margin: 0 }}>{isWeth ? "Three steps" : "Two steps"}</h2>
+              <h2 style={{ fontSize: 16, fontWeight: 650, margin: 0 }}>Deposit</h2>
               {health.status === "unreachable" && (
                 <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--amber)" }}>
-                  The pool isn&apos;t reachable right now. These steps are off and nothing will be sent to your
-                  wallet.
+                  The pool isn&apos;t reachable right now. Nothing will be sent to your wallet.
                 </div>
               )}
 
               {isWeth && (
-                <Step
-                  n={1}
-                  title="Wrap ETH into WETH"
-                  body="The pool holds WETH: ETH as a token, one for one."
-                  done={amountOk && !needsWrap}
-                  action={
-                    <button className="btn" disabled={!poolOk || !parsed || busy !== null || !needsWrap || wrapTooBig}
-                      onClick={() => step("wrap", () => wrap(account, parsed! - (ready?.balance ?? 0n)))}>
-                      {busy === "wrap" ? "Wrapping…" : "Wrap"}
-                    </button>
-                  }
-                />
+                <Step n={1} title="Wrap ETH" body="The pool holds ETH as WETH, one for one. Any WETH you already have is used first."
+                  done={amountOk && !needsWrap} active={busy === "wrap"} />
               )}
+              <Step n={isWeth ? 2 : 1} title="Approve the pool" body="Lets the pool take exactly this amount."
+                done={amountOk && !short && !needsApprove} active={busy === "approve"} />
+              <Step n={isWeth ? 3 : 2} title="Deposit" body={`Less the ${FEE_PCT} protocol fee, it becomes a note only your phrase can spend.`}
+                done={false} active={busy === "shield"} />
 
-              <Step
-                n={isWeth ? 2 : 1}
-                title="Approve the pool"
-                body="Lets the pool take exactly this amount. Nothing moves yet."
-                done={amountOk && !short && !needsApprove}
-                action={
-                  <button className="btn" disabled={!poolOk || !priced || !parsed || busy !== null || short || !needsApprove}
-                    onClick={() => step("approve", () => approve(account, asset.address, parsed!))}>
-                    {busy === "approve" ? "Approving…" : "Approve"}
-                  </button>
-                }
-              />
-
-              <Step
-                n={isWeth ? 3 : 2}
-                title="Deposit into the pool"
-                body={`Your ${asset.symbol}, less the ${FEE_PCT} protocol fee, becomes a note only your phrase can spend.`}
-                done={false}
-                action={
-                  <button className="btn" disabled={!poolOk || !canShield || busy !== null}
-                    onClick={() => step("shield", async () => {
-                      const w = await walletFor(asset.address);
-                      const built = await w.buildShield(asset.address, parsed!);
-                      const hash = await submitSelf(account, built);
-                      await refresh();
-                      return hash;
-                    })}>
-                    {depositLabel}
-                  </button>
-                }
-              />
+              <button className="btn" style={{ alignSelf: "flex-start" }} disabled={!canDeposit} onClick={() => void depositAll()}>
+                {depositLabel}
+              </button>
+              <div style={{ fontSize: 12.5, lineHeight: 1.6, color: "var(--text-low)" }}>
+                One confirm if your wallet can bundle them, otherwise one after another with nothing to click in between.
+              </div>
             </section>
 
             {busy && quiet && (
@@ -378,8 +360,8 @@ export default function ShieldPage() {
   );
 }
 
-function Step({ n, title, body, done, action }: {
-  n: number; title: string; body: string; done: boolean; action: React.ReactNode;
+function Step({ n, title, body, done, active }: {
+  n: number; title: string; body: string; done: boolean; active: boolean;
 }) {
   return (
     <div style={{
@@ -393,7 +375,7 @@ function Step({ n, title, body, done, action }: {
         <div style={{ fontSize: 14.5, fontWeight: 600, marginBottom: 4 }}>{title}</div>
         <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--text-mid)" }}>{body}</div>
       </div>
-      <div>{action}</div>
+      {active && <span className="mono" style={{ fontSize: 11, color: "var(--accent)", paddingTop: 3 }}>NOW</span>}
     </div>
   );
 }
