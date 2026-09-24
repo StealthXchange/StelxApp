@@ -84,6 +84,13 @@ export const ITEMS: Item[] = [
   },
 
   {
+    id: "legacy", cat: "privacy", status: "later", dev: "Rome",
+    title: "Legacy switch", line: "If you stop checking in, your private balance goes to the people you chose. Until then, nobody knows.",
+    milestones: [["Design", false], ["Time-locked keys", false], ["Check-in and rollover", false], ["Heir claim", false], ["Review", false], ["Live", false]],
+    notes: [{ date: "24 Sep", by: "Rome", text: "a separate legacy account, its key sealed to a date with time-lock encryption. each check-in moves it to a fresh one sealed further out. stop checking in and your heirs open it with their link. no contract change" }],
+  },
+
+  {
     id: "stocks", cat: "payments", status: "live", dev: "Rome",
     title: "Stocks in the pool", line: "195 stock tokens, held and sent privately.",
     milestones: [["Pool accepts 195 stocks", true], ["Deposit, send and withdraw any asset", true], ["Real shares after splits", true], ["Live", true]],
