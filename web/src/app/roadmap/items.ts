@@ -1,0 +1,175 @@
+export type Status = "live" | "building" | "next" | "later";
+export type Dev = "Rome" | "Kaka" | "Eddy";
+
+export interface Item {
+  id: string;
+  cat: CategoryId;
+  title: string;
+  line: string;
+  status: Status;
+  dev: Dev;
+
+  milestones: [string, boolean][];
+
+  notes?: Note[];
+}
+
+export interface Note {
+  date: string;
+  by: Dev;
+  text: string;
+}
+
+export type CategoryId = "privacy" | "payments" | "protocol";
+
+export const CATEGORIES: { id: CategoryId; name: string; line: string }[] = [
+  { id: "privacy", name: "Privacy", line: "Safer, more private, easier to check." },
+  { id: "payments", name: "Payments", line: "Moving money, and bringing people in." },
+  { id: "protocol", name: "Protocol", line: "The engine, and the big bets." },
+];
+
+export const DEVS: Dev[] = ["Rome", "Kaka", "Eddy"];
+
+export const STATUS_LABEL: Record<Status, string> = {
+  live: "Live",
+  building: "Building",
+  next: "Next",
+  later: "Later",
+};
+
+export const ITEMS: Item[] = [
+
+  {
+    id: "relay-domain", cat: "privacy", status: "live", dev: "Rome",
+    title: "Relay on our own domain", line: "Sends go through relay.stelx.app.",
+    milestones: [["Certificate and server", true], ["No logs, same limits", true], ["Site switched over", true]],
+    notes: [{date: "24 Sep",by: "Rome",text: "old relay domain got suspended by the registrar, never clicked their verify email. sends were down for a bit. moved it to relay.stelx.app, same box, no logs, same limits. kept the old one as a backup if it ever comes back"}],
+  },
+  {
+    id: "tor", cat: "privacy", status: "building", dev: "Eddy",
+    title: "Tor .onion relay", line: "Send through Tor, so the relay never sees your IP.",
+    milestones: [["Onion service on the relay server", false], ["Site detects Tor Browser", false], ["Sends use the .onion relay", false], ["Privacy Center explains it", false], ["Live", false]],
+  },
+  {
+    id: "passkey", cat: "privacy", status: "building", dev: "Rome",
+    title: "Passkey lock", line: "Unlock your wallet with Face ID or a fingerprint.",
+    milestones: [["Design", false], ["Phrase encrypted by passkey", false], ["Unlock flow", false], ["Fallback to your phrase", false], ["Live", false]],
+  },
+  {
+    id: "scanner", cat: "privacy", status: "building", dev: "Rome",
+    title: "Wallet warning cleared", line: "Get the pool off security scanners' flag lists.",
+    milestones: [["Pool verified on Blockscout", true], ["Verifier verified on Blockscout", true], ["Review requested", false], ["Public name tag", false], ["Flag cleared", false]],
+    notes: [{date: "23 Sep",by: "Rome",text: "kraken wallet showing the pool as malicious. new privacy contracts get auto flagged. verified pool + verifier on blockscout, exact match. next: false positive report and a name tag"}],
+  },
+  {
+    id: "roadmap", cat: "privacy", status: "live", dev: "Rome",
+    title: "This roadmap", line: "Live progress, team notes and your ideas, in the open.",
+    milestones: [["Page and real progress bars", true], ["Team sign-in, notes and chat", true], ["Community ideas", true], ["Live on stelx.app", true]],
+    notes: [{ date: "24 Sep", by: "Rome", text: "live on stelx.app/roadmap. we can log in, tick steps, post notes and chat. community ideas open, they show once one of us approves" }, { date: "24 Sep", by: "Rome", text: "first cut up on a preview. light version, the dark one was hard to read. adding team logins so we can post notes ourselves + community ideas" }],
+  },
+  {
+    id: "open-site", cat: "privacy", status: "next", dev: "Eddy",
+    title: "Open-source website", line: "The site's code public, with a build anyone can check.",
+    milestones: [["Wallet files committed with a hash check", false], ["Reproducible build", false], ["Published", false]],
+  },
+  {
+    id: "bounty", cat: "privacy", status: "next", dev: "Kaka",
+    title: "Bug bounty", line: "Paid rewards for finding bugs.",
+    milestones: [["Scope and rewards", false], ["Published", false]],
+  },
+  {
+    id: "clean-funds", cat: "privacy", status: "later", dev: "Eddy",
+    title: "Proof of clean funds", line: "Show your deposit is clean without revealing which is yours.",
+    milestones: [["Design", false], ["Circuit", false], ["Audit", false], ["Live", false]],
+  },
+
+  {
+    id: "stocks", cat: "payments", status: "live", dev: "Rome",
+    title: "Stocks in the pool", line: "195 stock tokens, held and sent privately.",
+    milestones: [["Pool accepts 195 stocks", true], ["Deposit, send and withdraw any asset", true], ["Real shares after splits", true], ["Live", true]],
+    notes: [{date: "24 Sep",by: "Rome",text: "first real stock deposit this morning (TSLA), in and back out fine"},{date: "23 Sep",by: "Rome",text: "stocks live on the site. ran it all on a mainnet fork first: AAPL in, private send, withdraw, all good. CRWD shows proper shares after its 4:1 split"}],
+  },
+  {
+    id: "gift", cat: "payments", status: "building", dev: "Kaka",
+    title: "Gift links", line: "Send a stock to anyone with a link.",
+    milestones: [["Design", false], ["Create a link", false], ["Claim into any wallet", false], ["Take back unclaimed gifts", false], ["Live", false]],
+  },
+  {
+    id: "pay-links", cat: "payments", status: "building", dev: "Kaka",
+    title: "Payment links and QR", line: "A link or code that fills in the send for you.",
+    milestones: [["Link format", false], ["Send fills itself in", false], ["QR on Receive", false], ["Live", false]],
+  },
+  {
+    id: "portfolio", cat: "payments", status: "building", dev: "Eddy",
+    title: "Portfolio in dollars", line: "Your holdings and total in USD.",
+    milestones: [["Prices without sending your address", false], ["Holdings in USD", false], ["Total", false], ["Live", false]],
+  },
+  {
+    id: "handles", cat: "payments", status: "next", dev: "Rome",
+    title: "Pay @handle on X", line: "Send to an X handle, privately.",
+    milestones: [["Design", true], ["Handle accounts", false], ["Signed handle list", false], ["Audit", false], ["Live", false]],
+    notes: [{date: "23 Sep",by: "Rome",text: "design done. main rule: your @handle can never be used to see what you get paid. separate handle account that never takes deposits, you download the whole list so nobody sees who you look up, 72h delay on address changes"}],
+  },
+  {
+    id: "wallet-apps", cat: "payments", status: "next", dev: "Kaka",
+    title: "Open in your wallet, and an app icon", line: "One tap into MetaMask, Kraken or Rabby, and STELX on your home screen.",
+    milestones: [["Open-in-wallet links", false], ["Installable app", false], ["Live", false]],
+  },
+  {
+    id: "pay-anywhere", cat: "payments", status: "next", dev: "Rome",
+    title: "Pay anywhere", line: "Pay someone on Base, Arbitrum or Ethereum straight from your private balance.",
+    milestones: [["Bridge route tested", true], ["Quotes through our relay, so your IP stays hidden", false], ["Withdraw straight into the bridge", false], ["Delivery tracking", false], ["Live", false]],
+    notes: [{date: "24 Sep",by: "Rome",text: "tried relay deposit addresses from robinhood chain. 10 USDG in, 9.90 USDC out on base, ~2s, about 10c. its just a plain transfer so a normal withdraw can go straight in, no new contract. refund addr needs to be a fresh one off your phrase, not your public wallet. round amounts by default"}],
+  },
+  {
+    id: "ultimate", cat: "payments", status: "next", dev: "Rome",
+    title: "Ultimate mode", line: "Out of STELX and straight into a private pool on another chain. No wallet of yours at either end.",
+    milestones: [["Pay anywhere live", false], ["Route into a private pool on the other side", false], ["Common amounts and timing, by default", false], ["Split big payments", false], ["Live", false]],
+    notes: [{ date: "24 Sep", by: "Rome", text: "next step after pay anywhere. instead of landing in a normal wallet on base or arbitrum, it lands straight in a privacy pool there. round amounts, a bit of waiting and splitting big ones make it much harder to match up" }],
+  },
+  {
+    id: "onramp", cat: "payments", status: "later", dev: "Eddy",
+    title: "Private on-ramp", line: "Arrive from Base or Arbitrum straight into the pool.",
+    milestones: [["Route", false], ["Build", false], ["Live", false]],
+  },
+  {
+    id: "merchants", cat: "payments", status: "later", dev: "Rome",
+    title: "Pay with STELX", line: "Pay for compute and services privately, with a private receipt.",
+    milestones: [["Merchant links", false], ["Order reference in the note", false], ["First partner", false]],
+  },
+
+  {
+    id: "mainnet", cat: "protocol", status: "live", dev: "Rome",
+    title: "Mainnet pool", line: "Live, verified, no owner, no admin.",
+    milestones: [["Public ceremony", true], ["Audit", true], ["Deployed", true], ["Verified", true]],
+    notes: [{date: "23 Sep",by: "Rome",text: "mainnet live. 31 contributions in the ceremony, contracts verified on sourcify and blockscout"}],
+  },
+  {
+    id: "wallet-v2", cat: "protocol", status: "building", dev: "Eddy",
+    title: "Wallet v2", line: "Sturdier scanning and view-only fixes, audited in one batch.",
+    milestones: [["Reorg and RPC recovery", true], ["Lagging RPC handled", false], ["Per-chain keys", false], ["View-only fixes", false], ["Audit", false], ["Live", false]],
+    notes: [{date: "24 Sep",by: "Rome",text: "outside reviewer found a few scanner edge cases (rpc dropping mid scan, reorgs). fixed, auditor signed off, live. rest of v2 goes to the auditor as one batch, not bit by bit"}],
+  },
+  {
+    id: "token-pool", cat: "protocol", status: "next", dev: "Kaka",
+    title: "STELX token pool", line: "Hold STELX privately. Relay fees in STELX.",
+    milestones: [["Token check", false], ["Pool deployed", false], ["Relay fees in STELX", false], ["Live", false]],
+  },
+  {
+    id: "sdk", cat: "protocol", status: "next", dev: "Eddy",
+    title: "SDK", line: "Other apps add private balances.",
+    milestones: [["API", false], ["Docs and examples", false], ["Published", false]],
+  },
+  {
+    id: "relays", cat: "protocol", status: "later", dev: "Kaka",
+    title: "Relay network", line: "Anyone can run a relay and earn fees.",
+    milestones: [["Design", false], ["Staking", false], ["Live", false]],
+  },
+  {
+    id: "swaps", cat: "protocol", status: "later", dev: "Rome",
+    title: "Private swaps", line: "Trade stocks without leaving the pool.",
+    milestones: [["Liquidity check", false], ["New pool design", false], ["Audit", false], ["Live", false]],
+  },
+];
+
+export const progress = (i: Item) => i.milestones.filter(([, done]) => done).length / i.milestones.length;

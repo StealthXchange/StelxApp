@@ -1,0 +1,198 @@
+{
+ "phase": "phase2",
+ "mode": "closed",
+ "open": false,
+ "floor": 10,
+ "windowEnd": "2026-09-22T16:00:00Z",
+ "rsvps": 0,
+ "contributions": [
+  {
+   "index": 1,
+   "name": "stelxdev",
+   "sha256": "a8a6ff59344cb4b295731f282f2d0c1bbc12f86aa0c9dc410e90a6c58df5fb6b",
+   "at": "2026-09-22T05:08:47.945Z"
+  },
+  {
+   "index": 2,
+   "name": "stelx-test-4905",
+   "sha256": "8c9cfd87ff385dc283f8578779654ee6630664a20aef3bf546c4d8f0c01751ac",
+   "at": "2026-09-22T06:48:47.688Z"
+  },
+  {
+   "index": 3,
+   "name": "Doc",
+   "sha256": "d8bb727a6dfaa99b7ecfd7290afa0eb71a39f80e0e1201998aea72410441bf22",
+   "at": "2026-09-22T06:53:20.033Z"
+  },
+  {
+   "index": 4,
+   "name": "dfgfdh",
+   "sha256": "6ac192c453111e6507c05fd5e074f1b47be9bbeef1ece528c7b2944085147efd",
+   "at": "2026-09-22T06:55:47.419Z"
+  },
+  {
+   "index": 5,
+   "name": "Cookdoc",
+   "sha256": "e48a603c15184ce960acef8d0cdf836fd57422f1b4bba5ee73ead076ead6c769",
+   "at": "2026-09-22T06:57:01.097Z"
+  },
+  {
+   "index": 6,
+   "name": "911",
+   "sha256": "1b0da15d679acaa80a7f3127d8ed29867326881255751abc81dd4421eb272fcb",
+   "at": "2026-09-22T07:03:34.448Z"
+  },
+  {
+   "index": 7,
+   "name": "Doc",
+   "sha256": "0bb2bde35c6c242d6f50da6a2ecf9ab1a69837c63ef242790389a5f8692f2619",
+   "at": "2026-09-22T07:08:51.961Z"
+  },
+  {
+   "index": 8,
+   "name": "anon",
+   "sha256": "0f777ccde34c670ebc249d78814d15bea6d849a14e98475d9bb759e75313c8cd",
+   "at": "2026-09-22T07:21:14.916Z"
+  },
+  {
+   "index": 9,
+   "name": "Apecx",
+   "sha256": "bda986387575757c3976dfe6607450ffed5074f50b8facbe9313d8da1a420ef4",
+   "at": "2026-09-22T07:39:28.559Z"
+  },
+  {
+   "index": 10,
+   "name": "pemudatrendy",
+   "sha256": "770b0d3990735b82921592b7d313db543ef339a5f2d241adb547bf966f78a3d0",
+   "at": "2026-09-22T07:56:50.346Z"
+  },
+  {
+   "index": 11,
+   "name": "anon",
+   "sha256": "a145300c6a49ac304ddbe3517c6f96c7c7eb58446d91d090bd9628e1cb2237c0",
+   "at": "2026-09-22T08:20:32.608Z"
+  },
+  {
+   "index": 12,
+   "name": "Mepuru",
+   "sha256": "e8c7c516365a90dd10be922830b16b9e276f52fe797fe8636ceaf4d43b3924e3",
+   "at": "2026-09-22T08:21:07.776Z"
+  },
+  {
+   "index": 13,
+   "name": "anon",
+   "sha256": "83b7d37b7ee1b733ba5f87b53537f9137db286a7330def61299dd6184552cbef",
+   "at": "2026-09-22T09:03:45.821Z"
+  },
+  {
+   "index": 14,
+   "name": "Kopkaas",
+   "sha256": "88cbe62bc436673e0d7b940367f1697c12c04117b2dade15ac0845f537cdc4ea",
+   "at": "2026-09-22T09:04:26.344Z"
+  },
+  {
+   "index": 15,
+   "name": "anon",
+   "sha256": "477c0a1a61d7272f922d05237fa8cbf4cff41a556fe0327b29921e1e96ce63a1",
+   "at": "2026-09-22T10:09:29.560Z"
+  },
+  {
+   "index": 16,
+   "name": "Dave",
+   "sha256": "7c2e794fdf9152385c27bdfda7c1f739c6730fb4b5e2e3cf0cef4e4f78a98d18",
+   "at": "2026-09-22T10:11:36.540Z"
+  },
+  {
+   "index": 17,
+   "name": "TEEENKASIA",
+   "sha256": "fb93ba3ba87ca0f12ef81bc427aab4a0d35b0aabff7adb9a625538bf32e9efa4",
+   "at": "2026-09-22T10:16:07.956Z"
+  },
+  {
+   "index": 18,
+   "name": "anon",
+   "sha256": "2c42c21c1bf93937bb57e6f2a42602e806fcbffe03065e3d62406b00b700cee6",
+   "at": "2026-09-22T11:02:48.143Z"
+  },
+  {
+   "index": 19,
+   "name": "anon",
+   "sha256": "da1b5b426fb19180b83e8767fcf76e4ae3e11993dce6dea3b62300807a964554",
+   "at": "2026-09-22T11:11:19.121Z"
+  },
+  {
+   "index": 20,
+   "name": "fai",
+   "sha256": "1f61ef8e347f0058699165f4a9cc9db071d7bc8acc62da6951266819e69f7d61",
+   "at": "2026-09-22T11:51:00.289Z"
+  },
+  {
+   "index": 21,
+   "name": "yoyo",
+   "sha256": "4bee771388301a747d3994e5636d42e42ecfab3335ff7ba2f6dbd173b6df5506",
+   "at": "2026-09-22T11:52:18.879Z"
+  },
+  {
+   "index": 22,
+   "name": "anon",
+   "sha256": "b24d64de3376540fec5c58bde368bcff8fc7cb6ab108b91150e9b73decf633bf",
+   "at": "2026-09-22T11:59:10.346Z"
+  },
+  {
+   "index": 23,
+   "name": "anon",
+   "sha256": "046bb99393b640f452cb201e2369f4671d85ff498757e0a83c6a8775888d471b",
+   "at": "2026-09-22T12:39:27.920Z"
+  },
+  {
+   "index": 24,
+   "name": "yhh001",
+   "sha256": "aace9fbefebb7163d41de00ac14d7c9d443d90a68ec7d64f1938edc5382065fd",
+   "at": "2026-09-22T12:46:25.941Z"
+  },
+  {
+   "index": 25,
+   "name": "anon",
+   "sha256": "bc785bff99600084a67c062694b3b165810cce8e9d54d81126e2d588aae3ba2f",
+   "at": "2026-09-22T13:10:54.208Z"
+  },
+  {
+   "index": 26,
+   "name": "anon",
+   "sha256": "3f0473cf4e970f09d723d2074f9812f10c1cd92159e5e77b4b06e1019c0c9651",
+   "at": "2026-09-22T13:47:22.480Z"
+  },
+  {
+   "index": 27,
+   "name": "Reggie88",
+   "sha256": "0fb4c939121744080f40858ab3ef3abcd2632459d5c063fe5958ca10fa5e6c78",
+   "at": "2026-09-22T14:16:27.159Z"
+  },
+  {
+   "index": 28,
+   "name": "333",
+   "sha256": "e5508303fb62fbe3bf4d218ffd3110c730a27fe82ffbadf69a6ef2c02bc4ed2b",
+   "at": "2026-09-22T14:58:49.933Z"
+  },
+  {
+   "index": 29,
+   "name": "anon",
+   "sha256": "090cdd43e425cc2ef0c9cf9a583acafa6029162f0efe81b0cd2e2788e83aaec0",
+   "at": "2026-09-22T15:02:10.694Z"
+  },
+  {
+   "index": 30,
+   "name": "Dahan",
+   "sha256": "e777a8d06b67feaadb99b9f3e3a942de616d506c018de67ad4682b758b12ab17",
+   "at": "2026-09-22T15:19:35.993Z"
+  },
+  {
+   "index": 31,
+   "name": "goooo",
+   "sha256": "0a56f277bebcef499529250d14e67b22a8aa3c584fcd478d4bdafdb93f6ed6f3",
+   "at": "2026-09-22T15:21:35.967Z"
+  }
+ ],
+ "queue": 0,
+ "turnMs": 180000
+}

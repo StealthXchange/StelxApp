@@ -1,0 +1,9 @@
+node_modules/
+.next/
+out/
+.env*
+.vercel
+next-env.d.ts
+*.tsbuildinfo
+/src/lib/pool/vendor/
+/public/pool/
