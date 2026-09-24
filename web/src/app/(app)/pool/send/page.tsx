@@ -81,6 +81,10 @@ export default function SendPage() {
     <div className="pane">
       <h1 className="pane-title">Send</h1>
 
+      <Link href={asset === WETH ? "/pool/gift" : `/pool/gift?asset=${asset.symbol}`} className="hint" style={{ textDecoration: "none" }}>
+        No STELX wallet on their end? <span style={{ color: "var(--accent)" }}>Send a gift link</span>
+      </Link>
+
       {bcError === "none" && <p className="hint warn">No broadcaster available.</p>}
       {bcError && bcError !== "none" && <p className="hint warn">{bcError}</p>}
 

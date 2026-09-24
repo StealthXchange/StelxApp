@@ -16,6 +16,9 @@ function PoolSetupInner() {
 
   const params = useSearchParams();
   const [step, setStep] = useState<Step>(params.get("step") === "recover" ? "recover" : "choose");
+
+  const asked = params.get("next");
+  const next = asked && /^\/(gift|pool)(\/[\w/-]*)?$/.test(asked) ? asked : "/pool";
   const [seed, setSeed] = useState<string | null>(null);
   const [shown, setShown] = useState(false);
   const [persist, setPersist] = useState(false);
@@ -70,7 +73,7 @@ function PoolSetupInner() {
     try {
       setPersistent(persist);
       await adopt(mnemonic);
-      router.push("/pool");
+      router.push(next);
     } catch (e: any) {
       setError(String(e?.message ?? e));
       setBusy(false);

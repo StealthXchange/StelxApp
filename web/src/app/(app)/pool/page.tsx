@@ -17,7 +17,7 @@ const TILES = [
   { href: "/pool/unshield", label: "Withdraw", icon: WithdrawIcon },
   { href: "/pool/activity", label: "Activity", icon: ActivityIcon },
   { href: "/pool/receive", label: "Receive", icon: ReceiveIcon },
-  { href: "/privacy", label: "Privacy", icon: PrivacyIcon },
+  { href: "/pool/gift", label: "Gift", icon: GiftIcon },
 ];
 
 export default function PoolOverviewPage() {
@@ -84,7 +84,7 @@ export default function PoolOverviewPage() {
         {TILES.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
-            href={asset !== WETH && (href === "/pool/send" || href === "/pool/unshield") ? `${href}?asset=${asset.symbol}` : href}
+            href={asset !== WETH && (href === "/pool/send" || href === "/pool/unshield" || href === "/pool/gift") ? `${href}?asset=${asset.symbol}` : href}
             className="wallet-tile"
           >
             <Icon />
@@ -144,6 +144,6 @@ function ActivityIcon() {
 function ReceiveIcon() {
   return <svg {...S}><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3m4 4v-7m-7 7h3" /></svg>;
 }
-function PrivacyIcon() {
-  return <svg {...S}><path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6l-7-3Z" /><path d="m9 12 2 2 4-4" /></svg>;
+function GiftIcon() {
+  return <svg {...S}><rect x="3" y="8" width="18" height="4" rx="1" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7M12 8v13" /><path d="M12 8S10.5 3 8 3a2.5 2.5 0 0 0 0 5M12 8s1.5-5 4-5a2.5 2.5 0 0 1 0 5" /></svg>;
 }

@@ -68,11 +68,11 @@ export function getServerSnapshot(): PoolState {
   return EMPTY;
 }
 
-function reads(): PublicClient {
+export function reads(): PublicClient {
   return (scanClient ??= sharedScanClient(sharedClient()));
 }
 
-function walletConfig(token: Address): WalletConfig {
+export function walletConfig(token: Address): WalletConfig {
   return {
     client: reads() as any,
     pool: poolAddress(),
@@ -88,7 +88,7 @@ function walletConfig(token: Address): WalletConfig {
   };
 }
 
-function storage(): Storage | null {
+export function storage(): Storage | null {
   if (typeof window === "undefined") return null;
   try {
     return window.localStorage.getItem(PERSIST_KEY) === "1" ? window.localStorage : window.sessionStorage;

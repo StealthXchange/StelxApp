@@ -99,7 +99,7 @@ export const ITEMS: Item[] = [
   {
     id: "gift", cat: "payments", status: "building", dev: "Kaka",
     title: "Gift links", line: "Send a stock to anyone with a link.",
-    milestones: [["Design", false], ["Create a link", false], ["Claim into any wallet", false], ["Take back unclaimed gifts", false], ["Live", false]],
+    milestones: [["Design", true], ["Create a link", true], ["Claim into any wallet", true], ["Take back unclaimed gifts", true], ["Live", false]],
   },
   {
     id: "pay-links", cat: "payments", status: "building", dev: "Kaka",

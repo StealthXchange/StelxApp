@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "verify:gift": "node --test scripts/check-gift.ts",
     "predev": "node scripts/sync-pool.mjs",
     "prebuild": "node scripts/sync-pool.mjs"
   },

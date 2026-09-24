@@ -1,7 +1,8 @@
 "use client";
 
 import { decodeFunctionData, type Hex } from "viem";
-import { POOL_ABI } from "./vendor/wallet.ts";
+import { POOL_ABI, type BuiltTx } from "./vendor/wallet.ts";
+import { submitViaBroadcaster, waitForBroadcast, type BroadcasterInfo } from "./vendor/broadcast.ts";
 import { poolAddress } from "./config.ts";
 import { poolClient } from "./walletStore.ts";
 
@@ -22,6 +23,23 @@ export async function spentOnChain(data: Hex): Promise<boolean> {
     nullifiers.map((n) => client.readContract({ address: poolAddress(), abi: POOL_ABI, functionName: "isNullifierSpent", args: [n] })),
   );
   return spent.some(Boolean);
+}
+
+export async function submitAndSettle(
+  info: BroadcasterInfo,
+  tx: { to: string; data: string },
+  on: { hash?: (h: Hex) => void; checking?: () => void } = {},
+): Promise<{ outcome: Outcome; error: string | null }> {
+  try {
+    const h = await submitViaBroadcaster(info, tx as BuiltTx);
+    on.hash?.(h);
+    return { outcome: await waitForBroadcast(info, h), error: null };
+  } catch (e: any) {
+    const msg = String(e?.message ?? e);
+    if (refusedBeforeSending(msg)) return { outcome: "refused", error: msg };
+    on.checking?.();
+    return { outcome: (await waitForSpent(tx.data as Hex)) ? "success" : "unknown", error: msg };
+  }
 }
 
 export async function waitForSpent(data: Hex, ms = 90_000): Promise<boolean> {
