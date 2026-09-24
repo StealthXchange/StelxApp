@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { isAddress } from "viem";
 import { mnemonicToAccount } from "viem/accounts";
 import { refusedBeforeSending, waitForSpent, type Outcome } from "@/lib/pool/outcome";
 import { BROADCASTERS } from "@/lib/pool/config";
@@ -16,7 +15,7 @@ import { usePoolHealth } from "@/lib/pool/health";
 import { BPS, FEE_BPS } from "@/lib/pool/vendor/wallet";
 import { ProvingPanel } from "@/components/pool/ProvingPanel";
 import { AmountField } from "@/components/pool/AmountField";
-import { PAY_CHAINS, PAY_FROM, PAY_MAX, payChain } from "@/lib/pool/payRoutes";
+import { PAY_CHAINS, PAY_FROM, PAY_MAX, payChain, validRecipient } from "@/lib/pool/payRoutes";
 
 interface Quote {
   requestId: `0x${string}`;
@@ -72,7 +71,7 @@ export default function PayAnywherePage() {
 
   const arriving = parsed !== null ? parsed - (parsed * FEE_BPS) / BPS : null;
   const enough = parsed !== null && parsed + fee <= balance;
-  const validTo = to.trim() ? isAddress(to.trim()) : null;
+  const validTo = to.trim() ? validRecipient(chain, to.trim()) : null;
 
   const feeOk = fee === 0n;
   const ready = Boolean(usdg && validTo && parsed && parsed > 0n && parsed <= PAY_MAX && enough && broadcaster && feeOk && health.status === "ok");
@@ -149,7 +148,7 @@ export default function PayAnywherePage() {
   return (
     <div className="pane">
       <h1 className="pane-title">Pay anywhere</h1>
-      <p className="hint">Pay someone on {PAY_CHAINS.map((c) => c.name).join(", ")} from your private balance. They get USDC.</p>
+      <p className="hint">Pay someone on {PAY_CHAINS.length} chains, Solana included, from your private balance. They get USDC.</p>
 
       {noRelay && <p className="hint warn">No broadcaster available.</p>}
       {err && <p className="hint warn">{err}</p>}
@@ -165,8 +164,8 @@ export default function PayAnywherePage() {
 
         <div className="field">
           <label className="mono field-label">To</label>
-          <input className="mono input" value={to} onChange={(e) => edit(setTo)(e.target.value)} placeholder="0x…" spellCheck={false} data-invalid={validTo === false} />
-          {validTo === false && <span className="hint warn">Invalid address</span>}
+          <input className="mono input" value={to} onChange={(e) => edit(setTo)(e.target.value)} placeholder={chain.vm === "svm" ? "Solana address" : "0x…"} spellCheck={false} data-invalid={validTo === false} />
+          {validTo === false && <span className="hint warn">{chain.vm === "svm" ? "Not a Solana address" : "Invalid address"}</span>}
         </div>
 
         {usdg && <AmountField value={amount} onChange={edit(setAmount)} balance={balance} fee={fee} label="Amount" asset={usdg} multiplier={null} />}

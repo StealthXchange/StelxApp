@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAddress } from "viem";
-import { PAY_FROM, PAY_MAX, payChain } from "@/lib/pool/payRoutes";
+import { PAY_FROM, PAY_MAX, payChain, validRecipient } from "@/lib/pool/payRoutes";
 import { configured, limited, sameSiteJson, visitor } from "@/lib/roadmap/server";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   const chain = payChain(Number(b.chainId));
   let amount: bigint;
   try { amount = BigInt(b.amount); } catch { amount = 0n; }
-  if (!chain || !isAddress(b.recipient) || !isAddress(b.refundTo) || amount <= 0n || amount > PAY_MAX) {
+  if (!chain || typeof b.recipient !== "string" || !validRecipient(chain, b.recipient) || !isAddress(b.refundTo) || amount <= 0n || amount > PAY_MAX) {
     return NextResponse.json({ error: "Check the chain, address and amount." }, { status: 400 });
   }
 
