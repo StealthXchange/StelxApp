@@ -371,12 +371,15 @@ button:focus-visible {
     row-gap: 8px;
   }
 }
+.nav-short { display: none; }
 @media (max-width: 600px) {
 
   .sidebar-nav .nav-item {
     padding: 0 10px;
     font-size: 12px;
   }
+  .nav-long { display: none; }
+  .nav-short { display: inline; }
   .sidebar-brand span {
     font-size: 13px;
   }

@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatedMark } from "@/components/AnimatedMark";
-import { RegistryList, Shield } from "@/components/icons";
+import { BuyArrow, RegistryList, Shield } from "@/components/icons";
 import { CHAIN } from "@/lib/pool/config";
 import { usePoolHealth, type PoolHealth } from "@/lib/pool/health";
 
 const NAV = [
-  { href: "/pool", label: "Shielded pool", Icon: Shield },
-  { href: "/privacy", label: "Privacy Center", Icon: RegistryList },
+  { href: "/pool", label: "Shielded pool", short: "Pool", Icon: Shield },
+  { href: "/pool/pay", label: "Pay anywhere", short: "Pay", Icon: BuyArrow },
+  { href: "/privacy", label: "Privacy Center", short: "Privacy", Icon: RegistryList },
 ] as const;
 
 function poolLine(h: PoolHealth): string {
@@ -31,13 +32,15 @@ export function Sidebar() {
         <span>STELX</span>
       </Link>
       <nav className="sidebar-nav" aria-label="App">
-        {NAV.map(({ href, label, Icon }) => {
-          const active = pathname.startsWith(href);
+        {NAV.map(({ href, label, short, Icon }) => {
+
+          const active = href === "/pool" ? pathname.startsWith(href) && !pathname.startsWith("/pool/pay") : pathname.startsWith(href);
           const color = active ? "var(--accent)" : "var(--text-mid)";
           return (
             <Link key={href} href={href} className={active ? "nav-item active" : "nav-item"} aria-label={label} title={label}>
               <Icon color={color} />
-              <span>{label}</span>
+              <span className="nav-long">{label}</span>
+              <span className="nav-short">{short}</span>
             </Link>
           );
         })}
