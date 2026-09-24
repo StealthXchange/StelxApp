@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { parseUnits } from "viem";
 import { BROADCASTERS } from "@/lib/pool/config";
+import { formatUsd, priceOf, usdValue, usePrices } from "@/lib/pool/prices";
 import { refresh, revealSeed } from "@/lib/pool/walletStore";
 import { usePool } from "@/lib/pool/usePool";
 import { useAssetChoice } from "@/lib/pool/useAssetChoice";
@@ -44,10 +46,28 @@ export default function SendGiftPage() {
     pickRelay(BROADCASTERS).then(setBroadcaster).catch((e) => setBcError(String(e.message)));
   }, []);
 
-  const parsed = useMemo(() => (amount ? parseAmount(amount, asset, multiplier) : null), [amount, asset, multiplier]);
+  const [inUsd, setInUsd] = useState(true);
+  const [usd, setUsd] = useState("");
+  const prices = usePrices();
+  const price = priceOf(asset, prices);
+  const dollars = inUsd && price !== null && price > 0;
+
   const fee = broadcaster?.fee ?? 0n;
 
   const fees = fee * 2n;
+  const parsed = useMemo(() => {
+    if (dollars) {
+      const v = Number(usd);
+      if (!usd.trim() || !Number.isFinite(v) || v < 0) return null;
+      const raw = parseUnits((v / price!).toFixed(Math.min(asset.decimals, 12)), asset.decimals);
+
+      const spendable = balance > fees ? balance - fees : 0n;
+      const cent = parseUnits((0.01 / price!).toFixed(Math.min(asset.decimals, 12)), asset.decimals);
+      return raw > spendable && raw - spendable <= cent ? spendable : raw;
+    }
+    return amount ? parseAmount(amount, asset, multiplier) : null;
+  }, [dollars, usd, price, amount, asset, multiplier, balance, fees]);
+  const inDollars = (raw: bigint) => { const v = usdValue(raw, asset, prices); return v === null ? "" : ` (${formatUsd(v)})`; };
   const feeAssetOk = fee === 0n || asset === WETH;
   const enough = parsed !== null && parsed + fees <= balance;
   const canCreate = Boolean(seed && parsed && parsed > 0n && enough && broadcaster && feeAssetOk && health.status === "ok" && state.stage === "idle" && !allocating);
@@ -85,7 +105,7 @@ export default function SendGiftPage() {
   }
 
   function startOver() {
-    reset(); setHash(null); setResult(null); setPending(null); setMade(null); setAmount(""); setBcError(null);
+    reset(); setHash(null); setResult(null); setPending(null); setMade(null); setAmount(""); setUsd(""); setBcError(null);
   }
 
   if (!pool.address || !seed) {
@@ -114,12 +134,30 @@ export default function SendGiftPage() {
               <AssetPicker
                 assets={options.map((h) => h.asset)}
                 value={asset}
-                onChange={(a) => { choose(a.address); setAmount(""); }}
+                onChange={(a) => { choose(a.address); setAmount(""); setUsd(""); }}
                 detail={(a) => { const h = options.find((o) => o.asset === a)!; return formatAmount(h.balance, a, h.multiplier); }}
               />
             )}
 
-            <AmountField value={amount} onChange={setAmount} balance={balance} fee={fees} label="Gift" asset={asset} multiplier={multiplier} />
+            {dollars ? (
+              <UsdField
+                value={usd}
+                onChange={setUsd}
+                spendable={usdValue(balance > fees ? balance - fees : 0n, asset, prices) ?? 0}
+                inAsset={parsed !== null && parsed > 0n ? `${formatAmount(parsed, asset, multiplier)} ${asset.symbol}` : null}
+              />
+            ) : (
+              <AmountField value={amount} onChange={setAmount} balance={balance} fee={fees} label="Gift" asset={asset} multiplier={multiplier} />
+            )}
+            {price !== null && price > 0 && (
+              <button
+                className="wallet-retry mono"
+                style={{ alignSelf: "flex-start", fontSize: 11, letterSpacing: "0.1em" }}
+                onClick={() => { setInUsd(!inUsd); setAmount(""); setUsd(""); }}
+              >
+                {inUsd ? `ENTER IN ${asset.symbol}` : "ENTER IN DOLLARS"}
+              </button>
+            )}
 
             {!feeAssetOk && <span className="hint warn">The relay takes its fee in WETH only, so {asset.symbol} can&apos;t go through it yet.</span>}
             {parsed !== null && parsed > 0n && !enough && <span className="hint warn">Balance too low</span>}
@@ -128,11 +166,11 @@ export default function SendGiftPage() {
               <>
                 <div className="fee-row mono">
                   <span>Fee</span>
-                  <span>{formatAmount(fee, asset, multiplier)} {asset.symbol}</span>
+                  <span>{formatAmount(fee, asset, multiplier)} {asset.symbol}{inDollars(fee)}</span>
                 </div>
                 <div className="fee-row mono">
                   <span>Claim fee, paid now</span>
-                  <span>{formatAmount(fee, asset, multiplier)} {asset.symbol}</span>
+                  <span>{formatAmount(fee, asset, multiplier)} {asset.symbol}{inDollars(fee)}</span>
                 </div>
               </>
             )}
@@ -373,5 +411,60 @@ function TakeBack({ giftPhrase, holding, to, broadcaster, onDone }: {
         <button className="btn btn-ghost" style={{ alignSelf: "flex-start" }} onClick={() => onDone(result === "success")}>Done</button>
       )}
     </>
+  );
+}
+
+function UsdField({ value, onChange, spendable, inAsset }: {
+  value: string;
+  onChange: (v: string) => void;
+  spendable: number;
+  inAsset: string | null;
+}) {
+  const label = { fontSize: 11, letterSpacing: "0.12em", color: "var(--text-low)" };
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+        <label className="mono" style={label}>Gift</label>
+        <span className="mono" style={{ fontSize: 11, color: "var(--text-low)" }}>SPENDABLE {formatUsd(spendable)}</span>
+      </div>
+
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <span style={{ fontSize: 20, color: "var(--text-mid)" }}>$</span>
+        <input
+          className="mono"
+          value={value}
+          onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, ""))}
+          placeholder="0.00"
+          inputMode="decimal"
+          style={{
+            flex: 1, minWidth: 0, width: "100%", background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 6,
+            padding: "12px 14px", color: "var(--text-hi)", fontSize: 20,
+          }}
+        />
+      </div>
+      <div className="mono" style={{ ...label, marginTop: 8, minHeight: 14 }}>{inAsset ? `≈ ${inAsset}` : ""}</div>
+
+      <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+        {[5, 10, 25, 50].map((d) => (
+          <button
+            key={d}
+            className="btn btn-ghost"
+            style={{ minHeight: 30, padding: "0 12px", fontSize: 12 }}
+            disabled={d > spendable}
+            onClick={() => onChange(String(d))}
+          >
+            ${d}
+          </button>
+        ))}
+        <button
+          className="btn btn-ghost"
+          style={{ minHeight: 30, padding: "0 12px", fontSize: 12 }}
+          disabled={spendable <= 0}
+          onClick={() => onChange((Math.floor(spendable * 100) / 100).toFixed(2))}
+        >
+          MAX
+        </button>
+      </div>
+    </div>
   );
 }

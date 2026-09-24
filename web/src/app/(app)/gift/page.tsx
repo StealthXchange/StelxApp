@@ -7,6 +7,7 @@ import { BROADCASTERS, txUrl } from "@/lib/pool/config";
 import { refresh } from "@/lib/pool/walletStore";
 import { shortAddr, usePool } from "@/lib/pool/usePool";
 import { formatAmount, WETH } from "@/lib/pool/assets";
+import { formatUsd, usdValue, usePrices } from "@/lib/pool/prices";
 import { AssetPicker } from "@/components/pool/AssetPicker";
 import { useProver, stageLabel } from "@/lib/pool/useProver";
 import { type BroadcasterInfo } from "@/lib/pool/vendor/broadcast";
@@ -84,6 +85,8 @@ export default function GiftPage() {
 
   const feeAssetOk = !current || fee === 0n || current.asset === WETH;
   const amount = current && current.balance > fee ? current.balance - fee : 0n;
+  const prices = usePrices();
+  const worth = current ? usdValue(broadcaster && amount > 0n ? amount : current.balance, current.asset, prices) : null;
   const dest = mode === "wallet" ? pool.address : to.trim();
   const validDest = useMemo(() => (mode === "wallet" ? Boolean(pool.address) : isAddress(to.trim())), [mode, pool.address, to]);
   const canClaim = Boolean(current && amount > 0n && validDest && broadcaster && feeAssetOk && health.status === "ok" && state.stage === "idle");
@@ -171,6 +174,7 @@ export default function GiftPage() {
             {formatAmount(broadcaster && amount > 0n ? amount : current.balance, current.asset, current.multiplier)}
             <span className="wallet-unit">{current.asset.symbol}</span>
           </div>
+          {worth !== null && <p className="hint" style={{ marginTop: -8 }}>about {formatUsd(worth)}</p>}
           <p className="hint">{current.asset.name}. Whoever claims first gets it, so keep the link to yourself.</p>
 
           {bcError === "none" && <p className="hint warn">No broadcaster available.</p>}
