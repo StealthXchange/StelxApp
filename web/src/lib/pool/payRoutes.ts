@@ -46,4 +46,6 @@ export const validRecipient = (chain: PayChain, s: string) => (chain.vm === "svm
 
 export const payChain = (id: number) => PAY_CHAINS.find((c) => c.id === id);
 
+export const PAY_FEE = { bps: 25, recipient: "0xE0d43ceA8c9a069f41D4Ce39126167532Dac2CAC" } as const;
+
 export const PAY_MAX = 10_000n * 10n ** 6n;

@@ -5,10 +5,12 @@ import { txUrl } from "@/lib/pool/config";
 import type { ProverState } from "@/lib/pool/useProver";
 
 export function ProvingPanel({
-  state, label, onCancel, onConfirm, confirmLabel, hash, result, kind = "transfer", doneTitle,
+  state, label, onCancel, onConfirm, confirmLabel, hash, result, kind = "transfer", doneTitle, transactionUrl = txUrl, balanceUpdated = true,
 }: {
 
   doneTitle?: string;
+  transactionUrl?: (hash: string) => string;
+  balanceUpdated?: boolean;
   state: ProverState;
   label: string;
   onCancel: () => void;
@@ -28,8 +30,9 @@ export function ProvingPanel({
       <section className="card" style={{ padding: "22px 26px", borderColor: "var(--accent-border)", display: "flex", gap: 14, alignItems: "flex-start" }}>
         <CheckCircle color="var(--accent)" />
         <div style={{ fontSize: 14, lineHeight: 1.7, color: "var(--text-mid)" }}>
-          <strong style={{ color: "var(--text-hi)", fontWeight: 600 }}>{doneTitle ?? (kind === "unshield" ? "Withdrawn." : "Sent.")}</strong> Your balance has been updated.
-          {hash && <> <a href={txUrl(hash)} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>View on explorer</a>.</>}
+          <strong style={{ color: "var(--text-hi)", fontWeight: 600 }}>{doneTitle ?? (kind === "unshield" ? "Withdrawn." : "Sent.")}</strong>{" "}
+          {balanceUpdated ? "Your balance has been updated." : "Confirmed on chain. Refresh to update your balance."}
+          {hash && <> <a href={transactionUrl(hash)} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>View on explorer</a>.</>}
           <div style={{ fontSize: 13, color: "var(--text-low)", marginTop: 8 }}>
             {kind === "unshield"
               ? "The destination and amount are public. Which deposit it came from isn't."

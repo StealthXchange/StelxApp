@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+import { configuredTokenPool } from "./src/lib/pool/tokenPoolConfig.ts";
+
+const tokenPool = configuredTokenPool();
 
 const TESTNET_ADDRESSES = new Map([
   ["0x33e4191705c386532ba27cbf171db86919200b94", "testnet WETH"],
@@ -51,11 +54,13 @@ function mainnetPreflight() {
 mainnetPreflight();
 
 const rpcOrigins = [
+  tokenPool?.rpc,
   process.env.NEXT_PUBLIC_POOL_RPC,
   "https://rpc.testnet.chain.robinhood.com",
   "https://rpc.mainnet.chain.robinhood.com",
 ];
 const relayOrigins = [
+  ...(tokenPool?.relays ?? []),
   ...(process.env.NEXT_PUBLIC_POOL_BROADCASTERS ?? "").split(","),
   process.env.NEXT_PUBLIC_CEREMONY_URL,
   "https://bc.nonyabusiness.xyz",

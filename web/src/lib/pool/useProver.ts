@@ -20,7 +20,9 @@ const INITIAL: ProverState = {
   stage: "idle", detail: null, downloaded: 0, downloadTotal: 0, elapsed: 0, error: null, tx: null,
 };
 
-export function useProver(mnemonic: string | null) {
+export interface ProverDeployment { rpc: string; chainId: number; pool: Address; deployBlock: bigint }
+
+export function useProver(mnemonic: string | null, deployment?: ProverDeployment) {
   const [state, setState] = useState<ProverState>(INITIAL);
   const workerRef = useRef<Worker | null>(null);
   const startedRef = useRef<number>(0);
@@ -65,17 +67,17 @@ export function useProver(mnemonic: string | null) {
         type: "init",
         mnemonic,
         config: {
-          rpc: POOL_RPC,
-          chainId: POOL_CHAIN_ID,
-          pool: poolAddress(),
-          deployBlock: poolDeployBlock().toString(),
+          rpc: deployment?.rpc ?? POOL_RPC,
+          chainId: deployment?.chainId ?? POOL_CHAIN_ID,
+          pool: deployment?.pool ?? poolAddress(),
+          deployBlock: (deployment?.deployBlock ?? poolDeployBlock()).toString(),
         },
       });
       worker.postMessage({
         type: "build", kind, token, to, amount: amount.toString(), broadcaster, broadcasterAddress, fee: fee.toString(),
       });
     },
-    [mnemonic],
+    [mnemonic, deployment],
   );
 
   const reset = useCallback(() => {

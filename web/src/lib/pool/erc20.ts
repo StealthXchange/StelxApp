@@ -46,6 +46,8 @@ export function hasWallet(): boolean {
   return typeof globalThis !== "undefined" && (found.size > 0 || Boolean((globalThis as any).ethereum));
 }
 
+export function connectedWalletProvider() { return injected(); }
+
 export async function connect(id?: string): Promise<Address> {
   const picked = id ? found.get(id)?.provider : null;
   if (id && !picked) throw new Error("That wallet is no longer available. Reload the page and try again.");

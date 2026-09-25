@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAddress } from "viem";
-import { PAY_FROM, PAY_MAX, payChain, validRecipient } from "@/lib/pool/payRoutes";
+import { PAY_FEE, PAY_FROM, PAY_MAX, payChain, validRecipient } from "@/lib/pool/payRoutes";
 import { configured, limited, sameSiteJson, visitor } from "@/lib/roadmap/server";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +33,7 @@ export async function POST(req: Request) {
       tradeType: "EXACT_INPUT",
       useDepositAddress: true,
       refundTo: b.refundTo,
+      appFees: [{ recipient: PAY_FEE.recipient, fee: String(PAY_FEE.bps) }],
     }),
   });
   const j = await r.json().catch(() => ({}));
@@ -54,5 +55,6 @@ export async function POST(req: Request) {
     symbolOut: j.details?.currencyOut?.currency?.symbol ?? "USDC",
     timeEstimate: j.details?.timeEstimate ?? null,
     feeUsd: j.fees?.relayer?.amountUsd ?? null,
+    appFeeUsd: j.fees?.app?.amountUsd ?? null,
   });
 }

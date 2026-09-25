@@ -44,6 +44,13 @@ export function Sidebar() {
             </Link>
           );
         })}
+        {process.env.NEXT_PUBLIC_STELX_POOL_ADDRESS && (
+          <Link href="/stelx-pool" className="nav-item" aria-label="STELX token pool" title="STELX token pool">
+            <Shield color="var(--text-mid)" />
+            <span className="nav-long">STELX token pool</span>
+            <span className="nav-short">STELX</span>
+          </Link>
+        )}
       </nav>
       <div style={{ flex: 1 }} />
       <div className="sidebar-foot">

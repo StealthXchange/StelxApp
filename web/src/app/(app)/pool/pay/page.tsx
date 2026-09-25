@@ -16,7 +16,7 @@ import { BPS, FEE_BPS } from "@/lib/pool/vendor/wallet";
 import { ProvingPanel } from "@/components/pool/ProvingPanel";
 import { AmountField } from "@/components/pool/AmountField";
 import { ChainPicker } from "@/components/pool/ChainPicker";
-import { PAY_CHAINS, PAY_FROM, PAY_MAX, payChain, validRecipient } from "@/lib/pool/payRoutes";
+import { PAY_CHAINS, PAY_FEE, PAY_FROM, PAY_MAX, payChain, validRecipient } from "@/lib/pool/payRoutes";
 
 interface Quote {
   requestId: `0x${string}`;
@@ -25,6 +25,7 @@ interface Quote {
   symbolOut: string;
   timeEstimate: number | null;
   feeUsd: string | null;
+  appFeeUsd: string | null;
   at: number;
 }
 
@@ -178,6 +179,7 @@ export default function PayAnywherePage() {
             <div className="fee-row mono"><span>They get</span><span>≈ {Number(quote.amountOutFormatted).toFixed(2)} {quote.symbolOut} on {chain.name}</span></div>
             <div className="fee-row mono"><span>Arrives in</span><span>~{quote.timeEstimate ?? "?"}s</span></div>
             {quote.feeUsd && <div className="fee-row mono"><span>Bridge fee</span><span>${Number(quote.feeUsd).toFixed(2)}</span></div>}
+            {quote.appFeeUsd && <div className="fee-row mono"><span>STELX fee {PAY_FEE.bps / 100}%</span><span>${Number(quote.appFeeUsd).toFixed(2)}</span></div>}
           </>
         )}
         {parsed !== null && parsed > 0n && usdg && (

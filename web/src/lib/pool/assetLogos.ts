@@ -1,0 +1,2 @@
+export const LOGO_ON_DARK = new Set(["AAPL", "ALAB", "AMZN", "ANET", "APP", "AVAV", "AXON", "BA", "BB", "BND", "CBRS", "CEG", "CLS", "CLSK", "CRCL", "CRWV", "DJT", "ELF", "FLNC", "GEV", "HIMS", "HWM", "IBM", "IBRX", "IREN", "JBL", "JOBY", "KSS", "LITE", "LMT", "LRCX", "MOD", "MRVL", "MXL", "NBIS", "OKLO", "ON", "P", "POWL", "PR", "PWR", "QBTS", "QQQ", "RBLX", "RDDT", "RGTI", "RUN", "SHY", "SLS", "SLV", "SMCI", "SMH", "SMR", "SOXX", "SPMO", "UNH", "VSAT", "VST", "XLK", "XNDU", "ZM"]);
+export const NO_LOGO = new Set(["EWT", "EWY", "INDA"]);

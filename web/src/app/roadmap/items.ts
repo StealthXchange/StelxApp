@@ -136,7 +136,7 @@ export const ITEMS: Item[] = [
     notes: [{ date: "24 Sep", by: "Rome", text: "next step after pay anywhere. instead of landing in a normal wallet on base or arbitrum, it lands straight in a privacy pool there. round amounts, a bit of waiting and splitting big ones make it much harder to match up" }],
   },
   {
-    id: "onramp", cat: "payments", status: "later", dev: "Eddy",
+    id: "onramp", cat: "payments", status: "building", dev: "Eddy",
     title: "Private on-ramp", line: "Arrive from Base or Arbitrum straight into the pool.",
     milestones: [["Route", false], ["Build", false], ["Live", false]],
   },
