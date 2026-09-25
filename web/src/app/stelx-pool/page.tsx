@@ -238,14 +238,14 @@ function TokenWallet() {
               <>
                 {parsed && parsed < minimum && <p className={s.note}>Minimum deposit: {fmt(minimum)} STELX</p>}
                 {parsed && readiness && parsed > readiness.balance && <p className={s.note}>Not enough STELX in your connected wallet.</p>}
-                {parsed && <div className={s.fee}><span>Private balance added · 0.1% pool fee</span><span>{fmt(parsed - parsed / 1000n)} STELX</span></div>}
+                {parsed && <div className={s.fee}><span>Private balance added · 0.1% protocol fee</span><span>{fmt(parsed - parsed / 1000n)} STELX</span></div>}
                 <button className="btn" disabled={!canDeposit || !address} onClick={() => void deposit()}>{busy ? "Waiting for your wallet…" : readiness && parsed && readiness.allowance < parsed ? "Approve STELX" : "Deposit STELX"}</button>
               </>
             ) : (
               <>
-                <div className={s.fee}><span>Relay fee</span><span>{relay ? `${fmt(fee)} STELX` : "Unavailable"}</span></div>
-                {tab === "Withdraw" && parsed && <div className={s.fee}><span>Recipient gets · 0.1% pool fee</span><span>{fmt(parsed - parsed / 1000n)} STELX</span></div>}
-                {parsed && balance !== null && !amountFits && <p className={s.note}>Not enough private STELX to cover the amount and relay fee.</p>}
+                <div className={s.fee}><span>Relay fee</span><span>{relay ? (fee === 0n ? "Free" : `${fmt(fee)} STELX`) : "Unavailable"}</span></div>
+                {tab === "Withdraw" && parsed && <div className={s.fee}><span>Recipient gets · 0.1% protocol fee</span><span>{fmt(parsed - parsed / 1000n)} STELX</span></div>}
+                {parsed && balance !== null && !amountFits && <p className={s.note}>Not enough private STELX to cover the amount{fee > 0n ? " and relay fee" : ""}.</p>}
                 {state.stage === "idle" && <button className="btn" disabled={!canSpend} onClick={() => {
                   if (relay && parsed) build(tab === "Send" ? "transfer" : "unshield", c.token, to.trim(), parsed, relay.address, relay.shieldedAddress, fee);
                 }}>{tab} STELX</button>}
@@ -259,7 +259,7 @@ function TokenWallet() {
       {result === "success" && <button className="btn btn-ghost" onClick={clear}>Done</button>}
       {(error || scanError) && <p role="alert" className={s.notice}>{error ?? scanError}</p>}
       {relayError && (tab === "Send" || tab === "Withdraw") && <p role="status" className={s.notice}>{relayError} <button className={s.textButton} onClick={() => void pickTokenRelay(c).then((r) => { setRelay(r); setRelayError(null); }).catch((e) => setRelayError(message(e)))}>Try again</button></p>}
-      <p className={s.footer}>This pool holds STELX separately from your stocks and other assets. Relay fees come from your private STELX balance.</p>
+      <p className={s.footer}>This pool holds STELX separately from your stocks and other assets.{fee > 0n && " Relay fees come from your private STELX balance."}</p>
     </>
   );
 }
