@@ -15,6 +15,7 @@ import { usePoolHealth } from "@/lib/pool/health";
 import { BPS, FEE_BPS } from "@/lib/pool/vendor/wallet";
 import { ProvingPanel } from "@/components/pool/ProvingPanel";
 import { AmountField } from "@/components/pool/AmountField";
+import { ChainPicker } from "@/components/pool/ChainPicker";
 import { PAY_CHAINS, PAY_FROM, PAY_MAX, payChain, validRecipient } from "@/lib/pool/payRoutes";
 
 interface Quote {
@@ -155,12 +156,7 @@ export default function PayAnywherePage() {
       {!feeOk && <p className="hint warn">The relay is charging a fee right now, so payments out are paused.</p>}
 
       <div className="card pane-card">
-        <div className="field">
-          <label className="mono field-label">Chain</label>
-          <select className="mono input" value={chainId} onChange={(e) => edit(setChainId)(Number(e.target.value))}>
-            {PAY_CHAINS.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
+        <ChainPicker value={chain} onChange={(c) => edit(setChainId)(c.id)} />
 
         <div className="field">
           <label className="mono field-label">To</label>

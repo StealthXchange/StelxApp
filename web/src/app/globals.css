@@ -1687,3 +1687,34 @@ button.notlive-cta { background: none; border-width: 0 0 1px; padding: 0; font-f
   .cer-stats { grid-template-columns: 1fr; }
   .cer-step { flex-direction: column; gap: 8px; }
 }
+
+.chain-button { display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left; }
+.chain-button .chain-chevron { margin-left: auto; color: var(--text-mid); }
+.chain-backdrop {
+  position: fixed; inset: 0; z-index: 60; background: rgba(21, 22, 19, 0.45);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.chain-sheet {
+  width: 100%; max-width: 440px; max-height: 82vh; display: flex; flex-direction: column; gap: 12px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 16px 16px 0 0;
+  padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
+}
+@media (min-width: 700px) {
+  .chain-backdrop { align-items: center; }
+  .chain-sheet { border-radius: 14px; max-height: 70vh; }
+}
+.chain-head { display: flex; justify-content: space-between; align-items: center; }
+.chain-head .mono { font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-hi); font-weight: 700; }
+.chain-close { background: none; border: 0; color: var(--text-mid); font-size: 16px; cursor: pointer; padding: 4px 6px; }
+.chain-popular { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.chain-chip, .chain-row {
+  display: flex; align-items: center; gap: 10px; background: none; cursor: pointer; color: var(--text-hi);
+  font-size: 13px; text-align: left; border-radius: 10px;
+}
+.chain-chip { border: 1px solid var(--border); padding: 9px 10px; }
+.chain-chip[data-active="true"] { border-color: var(--accent-border); background: var(--accent-dim); }
+.chain-list { overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin: 0 -6px; padding: 0 6px; }
+.chain-row { border: 0; padding: 9px 8px; min-height: 46px; }
+.chain-row:hover, .chain-chip:hover { background: var(--accent-dim); }
+.chain-row[data-active="true"] { background: var(--accent-dim); }
+.chain-tick { margin-left: auto; color: var(--accent); font-weight: 700; }
