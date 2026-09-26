@@ -166,6 +166,13 @@ export default function ShieldPage() {
           </div>
         </div>
 
+        {IS_MAINNET && (
+          <Link href="/pool/arrive" className="card" style={{ padding: "14px 22px", display: "flex", justifyContent: "space-between", gap: 12, color: "var(--text-mid)", fontSize: 14 }}>
+            <span>Funds on Base, Arbitrum or Ethereum? Arrive in one transfer, from any wallet or exchange.</span>
+            <span style={{ color: "var(--accent)" }}>→</span>
+          </Link>
+        )}
+
         {ASSETS.length > 1 && (
           <section className="card" style={{ padding: "20px 26px", display: "flex", flexDirection: "column", gap: 10 }}>
             <AssetPicker assets={ASSETS} value={asset} onChange={pick} />

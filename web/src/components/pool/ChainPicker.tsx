@@ -26,7 +26,9 @@ export function ChainLogo({ chain, size = 28 }: { chain: PayChain; size?: number
   );
 }
 
-export function ChainPicker({ value, onChange }: { value: PayChain; onChange: (c: PayChain) => void }) {
+export function ChainPicker({ value, onChange, chains = PAY_CHAINS, label = "Chain" }: {
+  value: PayChain; onChange: (c: PayChain) => void; chains?: PayChain[]; label?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const search = useRef<HTMLInputElement>(null);
@@ -41,15 +43,15 @@ export function ChainPicker({ value, onChange }: { value: PayChain; onChange: (c
     return () => { window.removeEventListener("keydown", esc); document.body.style.overflow = overflow; };
   }, [open]);
 
-  const all = useMemo(() => [...PAY_CHAINS].sort((a, b) => a.name.localeCompare(b.name)), []);
+  const all = useMemo(() => [...chains].sort((a, b) => a.name.localeCompare(b.name)), [chains]);
   const found = q.trim() ? all.filter((c) => c.name.toLowerCase().includes(q.trim().toLowerCase())) : all;
-  const popular = POPULAR.map((id) => PAY_CHAINS.find((c) => c.id === id)!).filter(Boolean);
+  const popular = POPULAR.map((id) => chains.find((c) => c.id === id)!).filter(Boolean);
 
   const pick = (c: PayChain) => { onChange(c); setOpen(false); setQ(""); };
 
   return (
     <div className="field">
-      <label className="mono field-label">Chain</label>
+      <label className="mono field-label">{label}</label>
       <button type="button" className="input chain-button" onClick={() => setOpen(true)} aria-haspopup="dialog">
         <ChainLogo chain={value} size={24} />
         <span className="mono">{value.name}</span>
