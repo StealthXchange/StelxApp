@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAddress } from "viem";
-import { PAY_FEE, PAY_FROM, PAY_MAX, payChain, validRecipient } from "@/lib/pool/payRoutes";
+import { PAY_FEE, PAY_FROM, PAY_MAX, payChain, payQuoteProblem, validRecipient } from "@/lib/pool/payRoutes";
 import { configured, limited, sameSiteJson, visitor } from "@/lib/roadmap/server";
 
 export const dynamic = "force-dynamic";
@@ -39,17 +39,14 @@ export async function POST(req: Request) {
   const j = await r.json().catch(() => ({}));
   if (!r.ok) return NextResponse.json({ error: j.message ?? "Relay couldn't quote that." }, { status: 502 });
 
-  const step = j.steps?.[0];
-  const deposit = step?.depositAddress;
-
-  const tx = step?.items?.[0]?.data;
-  const plain = tx && String(tx.to).toLowerCase() === PAY_FROM.token.toLowerCase() && String(tx.data).startsWith("0xa9059cbb");
-  if (!isAddress(deposit) || !j.requestId || !plain) {
+  const problem = payQuoteProblem(j);
+  if (problem) {
+    console.warn("[pay] refused a Relay quote:", problem);
     return NextResponse.json({ error: "Relay returned an unexpected route." }, { status: 502 });
   }
   return NextResponse.json({
     requestId: j.requestId,
-    depositAddress: deposit,
+    depositAddress: j.steps[0].depositAddress,
     amountOut: j.details?.currencyOut?.amount,
     amountOutFormatted: j.details?.currencyOut?.amountFormatted,
     symbolOut: j.details?.currencyOut?.currency?.symbol ?? "USDC",

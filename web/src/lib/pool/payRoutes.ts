@@ -30,6 +30,7 @@ export const PAY_CHAINS: PayChain[] = [
   { id: 57073, name: "Ink", vm: "evm", usdc: "0x2d270e6886d130d724215a266106e6832161eaed", explorer: "https://explorer.inkonchain.com" },
   { id: 80094, name: "Berachain", vm: "evm", usdc: "0x549943e04f40284185054145c6e4e9568c1d3241", explorer: "https://beratrail.io" },
   { id: 143, name: "Monad", vm: "evm", usdc: "0x754704bc059f8c67012fed69bc8a327a5aafb603", explorer: "https://monadvision.com" },
+  { id: 5042, name: "Arc", vm: "evm", usdc: "0x3600000000000000000000000000000000000000", explorer: "https://explorer.arc.io" },
 ];
 
 const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -50,6 +51,20 @@ export const payChain = (id: number) => PAY_CHAINS.find((c) => c.id === id);
 export const PAY_FEE = { bps: 25, recipient: "0xE0d43ceA8c9a069f41D4Ce39126167532Dac2CAC" } as const;
 
 export const PAY_MAX = 10_000n * 10n ** 6n;
+
+export interface RelayPayQuote {
+  requestId?: string;
+  steps?: { depositAddress?: string; items?: { data?: { to?: string; data?: string } }[] }[];
+}
+
+export function payQuoteProblem(j: RelayPayQuote): string | null {
+  const step = j.steps?.[0];
+  const tx = step?.items?.[0]?.data;
+  if (!isAddress(step?.depositAddress ?? "")) return "no deposit address";
+  if (!j.requestId) return "no request id";
+  const plain = tx && String(tx.to).toLowerCase() === PAY_FROM.token.toLowerCase() && String(tx.data).startsWith("0xa9059cbb");
+  return plain ? null : "deposit is not a USDG transfer";
+}
 
 export const FIRST_REFUND_INDEX = 1;
 

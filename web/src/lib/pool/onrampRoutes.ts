@@ -37,9 +37,14 @@ const EXTRA: Record<number, Pick<OnrampChain, "usdcDecimals" | "native">> = {
   57073: { usdcDecimals: 6, native: ETH },
   80094: { usdcDecimals: 6, native: null },
   143: { usdcDecimals: 6, native: { symbol: "MON", arrivesAs: "usdg" } },
+
+  5042: { usdcDecimals: 6, native: null },
 };
 
-export const ONRAMP_CHAINS: OnrampChain[] = PAY_CHAINS.filter((c) => EXTRA[c.id]).map((c) => ({ ...c, ...EXTRA[c.id] }));
+export const ONRAMP_HELD = new Set([5042]);
+
+export const ONRAMP_KNOWN: OnrampChain[] = PAY_CHAINS.filter((c) => EXTRA[c.id]).map((c) => ({ ...c, ...EXTRA[c.id] }));
+export const ONRAMP_CHAINS: OnrampChain[] = ONRAMP_KNOWN.filter((c) => !ONRAMP_HELD.has(c.id));
 
 export const onrampChain = (id: number) => ONRAMP_CHAINS.find((c) => c.id === id);
 
@@ -53,6 +58,8 @@ export const arrivesAs = (c: OnrampChain, a: OnrampAsset): "usdg" | "eth" => (a 
 
 export const ONRAMP_MIN_USD = 5;
 export const ONRAMP_MAX_USD = 10_000;
+
+export const ONRAMP_MIN_SLACK = 0.99;
 
 export const GAS_TOPUP_USD = "600000";
 

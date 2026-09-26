@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAddress, isAddress } from "viem";
 import {
-  arrivesAs, GAS_TOPUP_USD, ONRAMP_MAX_USD, ONRAMP_MIN_USD, ONRAMP_TO, onrampChain, originCurrency, quoteProblem, usdIn,
+  arrivesAs, GAS_TOPUP_USD, ONRAMP_MAX_USD, ONRAMP_MIN_SLACK, ONRAMP_MIN_USD, ONRAMP_TO, onrampChain, originCurrency, quoteProblem, usdIn,
   type OnrampAsset,
 } from "@/lib/pool/onrampRoutes";
 import { configured, limited, sameSiteJson, visitor } from "@/lib/roadmap/server";
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Relay returned an unexpected route." }, { status: 502 });
   }
   const usd = usdIn(j);
-  if (usd === null || usd < ONRAMP_MIN_USD || usd > ONRAMP_MAX_USD) {
+  if (usd === null || usd < ONRAMP_MIN_USD * ONRAMP_MIN_SLACK || usd > ONRAMP_MAX_USD) {
     const worth = usd === null ? "" : ` That is about $${usd.toFixed(2)}.`;
     return NextResponse.json({ error: `Between $${ONRAMP_MIN_USD} and $${ONRAMP_MAX_USD.toLocaleString("en-US")} per arrival for now.${worth}` }, { status: 400 });
   }
