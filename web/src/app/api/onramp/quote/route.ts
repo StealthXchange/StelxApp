@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAddress, isAddress } from "viem";
 import {
-  arrivesAs, GAS_TOPUP_USD, ONRAMP_MAX_USD, ONRAMP_MIN_SLACK, ONRAMP_MIN_USD, ONRAMP_TO, onrampChain, originCurrency, quoteProblem, usdIn,
+  arrivesAs, GAS_TOPUP_USD, ONRAMP_MAX_USD, ONRAMP_MIN_SLACK, ONRAMP_MIN_USD, ONRAMP_RECHECK, ONRAMP_TO, onrampChain, originCurrency, quoteProblem, usdIn,
   type OnrampAsset,
 } from "@/lib/pool/onrampRoutes";
+import { validRecipient } from "@/lib/pool/payRoutes";
 import { configured, limited, sameSiteJson, visitor } from "@/lib/roadmap/server";
 
 export const dynamic = "force-dynamic";
@@ -18,12 +19,13 @@ export async function POST(req: Request) {
   const asset: OnrampAsset | null = b.asset === "usdc" || b.asset === "native" ? b.asset : null;
   let amount: bigint;
   try { amount = BigInt(b.amount); } catch { amount = 0n; }
-  if (!chain || !asset || (asset === "native" && !chain.native) || !isAddress(b.recipient) || !isAddress(b.refundTo) || amount <= 0n) {
+  if (!chain || !asset || (asset === "native" && !chain.native) || !isAddress(b.recipient) || typeof b.refundTo !== "string" || !validRecipient(chain, b.refundTo) || amount <= 0n) {
     return NextResponse.json({ error: "Check the chain, coin and amount." }, { status: 400 });
   }
   const recipient = getAddress(b.recipient);
   const lands = arrivesAs(chain, asset);
   const key = process.env.RELAY_API_KEY?.trim();
+  if (chain.vm === "svm" && !key) return NextResponse.json({ error: `Arriving from ${chain.name} isn't open on this server.` }, { status: 503 });
 
   const r = await fetch("https://api.relay.link/quote", {
     method: "POST",
@@ -33,6 +35,8 @@ export async function POST(req: Request) {
       user: b.refundTo,
       recipient,
       refundTo: b.refundTo,
+
+      ...(chain.vm === "svm" || ONRAMP_RECHECK.has(chain.id) ? { recoveryAddress: b.refundTo } : {}),
       originChainId: chain.id,
       destinationChainId: ONRAMP_TO.chainId,
       originCurrency: originCurrency(chain, asset),
@@ -57,10 +61,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Between $${ONRAMP_MIN_USD} and $${ONRAMP_MAX_USD.toLocaleString("en-US")} per arrival for now.${worth}` }, { status: 400 });
   }
   const d = j.details;
+  const deposit = String(j.steps[0].depositAddress);
 
   return NextResponse.json({
     requestId: j.requestId,
-    depositAddress: getAddress(j.steps[0].depositAddress),
+
+    depositAddress: chain.vm === "svm" ? deposit : getAddress(deposit),
     amountIn: amount.toString(),
     usdIn: usd,
     amountOut: String(d.currencyOut.amount),

@@ -126,7 +126,7 @@ export const ITEMS: Item[] = [
   },
   {
     id: "pay-anywhere", cat: "payments", status: "next", dev: "Rome",
-    title: "Pay anywhere", line: "Pay someone on Base, Arbitrum or Ethereum straight from your private balance.",
+    title: "Pay anywhere", line: "Pay someone on any of 20 chains, Solana and Arc included, straight from your private balance.",
     milestones: [["Bridge route tested", true], ["Quotes through our relay, so your IP stays hidden", false], ["Withdraw straight into the bridge", false], ["Delivery tracking", false], ["Live", false]],
     notes: [{date: "24 Sep",by: "Rome",text: "tried relay deposit addresses from robinhood chain. 10 USDG in, 9.90 USDC out on base, ~2s, about 10c. its just a plain transfer so a normal withdraw can go straight in, no new contract. refund addr needs to be a fresh one off your phrase, not your public wallet. round amounts by default"}],
   },
@@ -138,7 +138,7 @@ export const ITEMS: Item[] = [
   },
   {
     id: "onramp", cat: "payments", status: "building", dev: "Eddy",
-    title: "Private on-ramp", line: "Arrive from Base or Arbitrum straight into the pool.",
+    title: "Private on-ramp", line: "Arrive from any of 20 chains, Solana included, straight into the pool.",
     milestones: [["Route", false], ["Build", false], ["Live", false]],
   },
   {

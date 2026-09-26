@@ -8,19 +8,20 @@ import { revealSeed } from "@/lib/pool/walletStore";
 import { usePool } from "@/lib/pool/usePool";
 import { usePoolHealth } from "@/lib/pool/health";
 import { FEE_BPS } from "@/lib/pool/vendor/wallet";
-import { landingKey } from "@/lib/pool/landingKeys";
+import { landingKey, landingSolanaAddress, landingSolanaKey } from "@/lib/pool/landingKeys";
 import {
   allocateLanding, depositArrival, findArrivals, hasArrival, hasLeftover, landingAddress, loadArrivals, readLanding, saveArrival,
   sweepLeftover, type ArrivalRecord, type DepositStep, type Landed,
 } from "@/lib/pool/onramp";
 import {
-  arrivesAs, assetDecimals, assetSymbol, ONRAMP_CHAINS, ONRAMP_MAX_USD, ONRAMP_MIN_USD, onrampChain,
+  arrivesAs, assetDecimals, assetSymbol, ONRAMP_CHAINS, ONRAMP_MAX_USD, ONRAMP_MIN_USD, ONRAMP_RECHECK, onrampChain,
   type OnrampAsset, type OnrampChain,
 } from "@/lib/pool/onrampRoutes";
 import { ChainPicker } from "@/components/pool/ChainPicker";
 
 interface Quote {
-  depositAddress: Address;
+
+  depositAddress: string;
   amountIn: string;
   amountOut: string;
   symbolOut: string;
@@ -38,6 +39,11 @@ const POLL_MS = 4000;
 
 const GAS_WAIT_MS = 90_000;
 
+const RECHECK_AFTER_MS = 60_000;
+const RECHECK_EVERY_MS = 60_000;
+
+const RECHECK_WITHIN_MS = 7 * 24 * 3600_000;
+
 async function post(path: string, body: unknown) {
   const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const j = await r.json().catch(() => ({}));
@@ -50,6 +56,11 @@ const usdg = (raw: bigint) => trim(formatUnits(raw, 6), 2);
 const eth = (raw: bigint) => trim(formatEther(raw), 6);
 
 const stamped = (r: Omit<ArrivalRecord, "at">): ArrivalRecord => ({ ...r, at: Date.now() });
+
+const recheck = (chainId: number, depositAddress: string) =>
+  post("/api/onramp/reindex", { chainId, depositAddress }).catch(() => null);
+
+const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 type Phase = "waiting" | "bridging" | "landed" | "depositing" | "done" | "refunded" | "failed";
 
@@ -120,6 +131,12 @@ export default function ArrivePage() {
       if (!live) return;
       setList(l);
       void sweepEarlier(l.map(({ record, landed }) => ({ index: record.index, landed })));
+
+      for (const { record: r, landed: x } of l) {
+        if (r.chainId && ONRAMP_RECHECK.has(r.chainId) && r.depositAddress && x && x.nonce === 0 && !hasArrival(x) && Date.now() - r.at < RECHECK_WITHIN_MS) {
+          void recheck(r.chainId, r.depositAddress);
+        }
+      }
     }, () => {});
     return () => { live = false; };
   }, [readList, sweepEarlier]);
@@ -130,7 +147,8 @@ export default function ArrivePage() {
     try {
       const { index, address } = await allocateLanding(seed, pool.address);
 
-      const q = await post("/api/onramp/quote", { chainId, asset, amount: parsed.toString(), recipient: address, refundTo: address });
+      const refundTo = chain.vm === "svm" ? landingSolanaAddress(seed, index) : address;
+      const q = await post("/api/onramp/quote", { chainId, asset, amount: parsed.toString(), recipient: address, refundTo });
       const record = stamped({ index, chainId, asset, amountIn: parsed.toString(), requestId: q.requestId, depositAddress: q.depositAddress });
 
       saveArrival(pool.address, record);
@@ -166,6 +184,7 @@ export default function ArrivePage() {
     }
   }, [seed, pool.address, current, reloadList]);
 
+  const lastRecheck = useRef(0);
   useEffect(() => {
     if (!current || phase === "done" || phase === "depositing") return;
     let live = true;
@@ -178,6 +197,13 @@ export default function ArrivePage() {
           if (q.status === "refund" || q.status === "refunded") setPhase("refunded");
           else if (q.status === "failure") setPhase("failed");
           else if (phase === "waiting") setPhase("bridging");
+        } else if (live && phase === "waiting" && current.chainId && ONRAMP_RECHECK.has(current.chainId) && current.depositAddress) {
+
+          const now = Date.now();
+          if (now - current.at >= RECHECK_AFTER_MS && now - lastRecheck.current >= RECHECK_EVERY_MS) {
+            lastRecheck.current = now;
+            void recheck(current.chainId, current.depositAddress);
+          }
         }
       } catch {  }
       try {
@@ -246,7 +272,7 @@ export default function ArrivePage() {
   return (
     <div className="pane">
       <h1 className="pane-title">Arrive from another chain</h1>
-      <p className="hint">USDC from {ONRAMP_CHAINS.length} chains, or ETH, into your pool in one transfer. From any wallet or exchange.</p>
+      <p className="hint">USDC from {ONRAMP_CHAINS.length} chains, Solana included, or ETH, into your pool in one transfer. From any wallet or exchange.</p>
       {err && <p className="hint warn">{err}</p>}
       {swept > 0n && <p className="hint">Swept {eth(swept)} ETH of leftover gas into your balance.</p>}
 
@@ -316,9 +342,34 @@ export default function ArrivePage() {
                   {quote.depositAddress}
                   <span style={{ display: "block", marginTop: 6, fontSize: 10.5, letterSpacing: "0.14em", color: "var(--accent)" }}>{copied ? "COPIED" : "TAP TO COPY"}</span>
                 </button>
-                <span className="hint warn" style={{ textAlign: "left" }}>
-                  Only {inUnit} on {fromChain?.name}. Another token or chain won&apos;t arrive.
-                </span>
+                {fromChain.vm === "svm" ? (
+                  <>
+                    <span className="hint warn" style={{ textAlign: "left" }}>
+                      Only USDC on Solana, the token with mint {short(fromChain.usdc)}. Another token or network won&apos;t arrive.
+                    </span>
+                    <span className="hint" style={{ textAlign: "left" }}>
+                      Send it from any Solana wallet, or withdraw it from an exchange on the Solana network. No memo needed.
+                    </span>
+                  </>
+                ) : !ONRAMP_RECHECK.has(fromChain.id) && (
+                  <span className="hint warn" style={{ textAlign: "left" }}>
+                    Only {inUnit} on {fromChain?.name}. Another token or chain won&apos;t arrive.
+                  </span>
+                )}
+                {ONRAMP_RECHECK.has(fromChain.id) && (
+                  <>
+                    <span className="hint warn" style={{ textAlign: "left" }}>
+                      Only USDC on {fromChain.name}, sent as a token transfer: the USDC token at {short(fromChain.usdc)}, not {fromChain.name}&apos;s
+                      gas coin. Wallets such as MetaMask show {fromChain.name}&apos;s USDC as the network&apos;s own coin as well: pick the token.
+                    </span>
+                    <span className="hint" style={{ textAlign: "left" }}>
+                      Sent the gas coin anyway? This page asks Relay to look again after a minute. Anything Relay can&apos;t deliver is
+                      refunded to your landing address on {fromChain.name}, or can be reclaimed at{" "}
+                      <a href="https://relay.link/withdraw" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>relay.link/withdraw</a>{" "}
+                      with its key, under Earlier arrivals.
+                    </span>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -353,7 +404,8 @@ export default function ArrivePage() {
           )}
           {(phase === "refunded" || phase === "failed") && (
             <p className="hint warn">
-              Relay sends refunds to your landing address on {fromChain?.name}, {current.landing}, less its gas. That address
+              Relay sends refunds to your landing address on {fromChain?.name},{" "}
+              {fromChain.vm === "svm" ? landingSolanaAddress(seed, current.index) : current.landing}, less its gas. That address
               belongs to your phrase; its key is under Earlier arrivals below.
             </p>
           )}
@@ -394,7 +446,19 @@ export default function ArrivePage() {
                 <div className="mono" style={{ fontSize: 11, lineHeight: 1.6, color: "var(--text-mid)", wordBreak: "break-all" }}>
                   Landing address {addr}<br />
                   Key {landingKey(seed, record.index)}<br />
-                  <span style={{ color: "var(--amber)" }}>Anyone with this key can take what&apos;s on this address, on every chain. Import it into a wallet only to move a refund.</span>
+                  {c?.vm === "svm" && (
+                    <>
+                      Solana refund address {landingSolanaAddress(seed, record.index)}<br />
+                      Solana key {landingSolanaKey(seed, record.index)}<br />
+                    </>
+                  )}
+                  <span style={{ color: "var(--amber)" }}>
+                    {c?.vm === "svm"
+                      ? "Anyone with these keys can take what's on these addresses. Import one into a wallet (the Solana key into a Solana wallet such as Phantom) only to move a refund, or to reclaim a stuck deposit at relay.link/withdraw."
+                      : c && ONRAMP_RECHECK.has(c.id)
+                        ? "Anyone with this key can take what's on this address, on every chain. Import it into a wallet only to move a refund, or to reclaim a stuck deposit at relay.link/withdraw."
+                        : "Anyone with this key can take what's on this address, on every chain. Import it into a wallet only to move a refund."}
+                  </span>
                 </div>
               ) : (
                 <button className="mono" style={{ alignSelf: "flex-start", background: "none", border: 0, padding: 0, fontSize: 10.5, letterSpacing: "0.12em", color: "var(--text-low)", cursor: "pointer" }} onClick={() => setShownKey(addr)}>
