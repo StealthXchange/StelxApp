@@ -36,6 +36,8 @@ export async function readLanding(address: Address): Promise<Landed> {
 
 export const hasArrival = (l: Landed) => l.usdg > 0n || l.weth > 0n || l.eth >= ETH_DUST;
 
+export const hasLeftover = (l: Landed) => l.nonce > 0 && l.eth > 0n && !hasArrival(l);
+
 const used = (l: Landed) => l.nonce > 0 || l.eth > 0n || l.usdg > 0n || l.weth > 0n;
 
 export interface ArrivalRecord {
@@ -95,9 +97,9 @@ export async function findArrivals(phrase: string, poolAddr: string, progress?: 
   return out.sort((a, b) => a.index - b.index);
 }
 
-export type DepositStep = "wrap" | "approve" | "deposit";
+export type DepositStep = "wrap" | "approve" | "deposit" | "sweep";
 
-export async function depositArrival(phrase: string, index: number, onStep?: (s: DepositStep, symbol: string) => void): Promise<Hex[]> {
+async function landingSigner(phrase: string, index: number, onStep?: (s: DepositStep, symbol: string) => void) {
   const account = privateKeyToAccount(landingKey(phrase, index));
   const client = poolClient();
   const signer = createWalletClient({ account, chain: CHAIN, transport: poolTransport() });
@@ -141,15 +143,36 @@ export async function depositArrival(phrase: string, index: number, onStep?: (s:
     hashes.push(await send(built.to as Address, built.data as Hex));
   };
 
+  const wrap = (value: bigint) => send(POOL_TOKEN, encodeFunctionData({ abi: ERC20, functionName: "deposit" }), value);
+
+  return { address: account.address, client, keep, hashes, shieldAll, wrap };
+}
+
+export async function depositArrival(phrase: string, index: number, onStep?: (s: DepositStep, symbol: string) => void): Promise<Hex[]> {
+  const { address, client, keep, hashes, shieldAll, wrap } = await landingSigner(phrase, index, onStep);
+
   await shieldAll(USDG, "USDG");
 
-  const eth = await client.getBalance({ address: account.address });
+  const eth = await client.getBalance({ address });
   if (eth >= ETH_DUST && eth > keep) {
     onStep?.("wrap", "ETH");
-    await send(POOL_TOKEN, encodeFunctionData({ abi: ERC20, functionName: "deposit" }), eth - keep);
+    await wrap(eth - keep);
   }
   await shieldAll(POOL_TOKEN, "WETH");
 
   if (hashes.length) await refresh();
   return hashes;
+}
+
+export async function sweepLeftover(phrase: string, index: number, onStep?: (s: DepositStep, symbol: string) => void): Promise<bigint> {
+  const { address, client, keep, shieldAll, wrap } = await landingSigner(phrase, index, onStep);
+  const [l, gasPrice] = await Promise.all([readLanding(address), client.getGasPrice()]);
+  const spare = l.eth - keep;
+  if (!hasLeftover(l) || spare < 2n * GAS_UNITS * gasPrice) return 0n;
+
+  onStep?.("sweep", "ETH");
+  await wrap(spare);
+  await shieldAll(POOL_TOKEN, "WETH");
+  await refresh();
+  return spare;
 }

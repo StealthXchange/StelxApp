@@ -10,8 +10,8 @@ import { usePoolHealth } from "@/lib/pool/health";
 import { FEE_BPS } from "@/lib/pool/vendor/wallet";
 import { landingKey } from "@/lib/pool/landingKeys";
 import {
-  allocateLanding, depositArrival, findArrivals, hasArrival, landingAddress, loadArrivals, readLanding, saveArrival,
-  type ArrivalRecord, type DepositStep, type Landed,
+  allocateLanding, depositArrival, findArrivals, hasArrival, hasLeftover, landingAddress, loadArrivals, readLanding, saveArrival,
+  sweepLeftover, type ArrivalRecord, type DepositStep, type Landed,
 } from "@/lib/pool/onramp";
 import {
   arrivesAs, assetDecimals, assetSymbol, ONRAMP_CHAINS, ONRAMP_MAX_USD, ONRAMP_MIN_USD, onrampChain,
@@ -77,6 +77,8 @@ export default function ArrivePage() {
   const autoOff = useRef(false);
   const [depositing, setDepositing] = useState(false);
 
+  const [swept, setSwept] = useState(0n);
+
   const [list, setList] = useState<{ record: ArrivalRecord; landed: Landed | null }[]>([]);
   const [scanning, setScanning] = useState<number | null>(null);
   const [shownKey, setShownKey] = useState<string | null>(null);
@@ -97,11 +99,30 @@ export default function ArrivePage() {
   }, [seed, pool.address]);
   const reloadList = useCallback(async () => setList(await readList()), [readList]);
 
+  const sweepEarlier = useCallback(async (found: { index: number; landed: Landed | null }[]) => {
+    if (!seed || running.current || !found.some(({ landed: l }) => l && hasLeftover(l))) return;
+    running.current = true; setDepositing(true);
+    try {
+      for (const { index, landed: l } of found) {
+        if (!l || !hasLeftover(l)) continue;
+        const s = await sweepLeftover(seed, index).catch(() => 0n);
+        if (s > 0n) setSwept((x) => x + s);
+      }
+    } finally {
+      running.current = false; setDepositing(false);
+      void reloadList();
+    }
+  }, [seed, reloadList]);
+
   useEffect(() => {
     let live = true;
-    readList().then((l) => { if (live) setList(l); }, () => {});
+    readList().then((l) => {
+      if (!live) return;
+      setList(l);
+      void sweepEarlier(l.map(({ record, landed }) => ({ index: record.index, landed })));
+    }, () => {});
     return () => { live = false; };
-  }, [readList]);
+  }, [readList, sweepEarlier]);
 
   async function review() {
     if (!ready || !seed || !pool.address || parsed === null) return;
@@ -125,10 +146,14 @@ export default function ArrivePage() {
     running.current = true; setDepositing(true); setErr(null);
     if (current?.index === index) setPhase("depositing");
     try {
-      const labels: Record<DepositStep, string> = { wrap: "Wrapping ETH", approve: "Approving", deposit: "Depositing" };
-      const hashes = await depositArrival(seed, index, (s, sym) => setStep(`${labels[s]} ${s === "wrap" ? "" : sym}`.trim()));
+      const labels: Record<DepositStep, string> = { wrap: "Wrapping ETH", approve: "Approving", deposit: "Depositing", sweep: "Sweeping leftover gas" };
+      const onStep = (s: DepositStep, sym: string) => setStep(`${labels[s]} ${s === "wrap" || s === "sweep" ? "" : sym}`.trim());
+      const hashes = await depositArrival(seed, index, onStep);
       const rec = loadArrivals(pool.address).find((r) => r.index === index);
       if (rec && hashes.length) saveArrival(pool.address, { ...rec, depositTx: hashes.at(-1) });
+
+      const s = await sweepLeftover(seed, index, onStep).catch(() => 0n);
+      if (s > 0n) setSwept((x) => x + s);
       if (current?.index === index) setPhase("done");
       setLanded(await readLanding(landing));
     } catch (e) {
@@ -177,7 +202,11 @@ export default function ArrivePage() {
   async function scan() {
     if (!seed || !pool.address) return;
     setErr(null); setScanning(0);
-    try { await findArrivals(seed, pool.address, setScanning); await reloadList(); }
+    try {
+      const found = await findArrivals(seed, pool.address, setScanning);
+      await reloadList();
+      void sweepEarlier(found);
+    }
     catch (e) { setErr(String((e as Error).message ?? e)); }
     finally { setScanning(null); }
   }
@@ -219,6 +248,7 @@ export default function ArrivePage() {
       <h1 className="pane-title">Arrive from another chain</h1>
       <p className="hint">USDC from {ONRAMP_CHAINS.length} chains, or ETH, into your pool in one transfer. From any wallet or exchange.</p>
       {err && <p className="hint warn">{err}</p>}
+      {swept > 0n && <p className="hint">Swept {eth(swept)} ETH of leftover gas into your balance.</p>}
 
       {!current && (
         <div className="card pane-card">

@@ -232,6 +232,7 @@ function TokenWallet() {
               ) : <label className={s.field}>To<input className="input mono" value={to} onChange={(e) => setTo(e.target.value)} spellCheck={false} placeholder={tab === "Send" ? "stelx1…" : "0x…"} />{to && !validRecipient && <span className={s.note}>Enter a valid {tab === "Send" ? "STELX" : "wallet"} address.</span>}</label>}
               <label className={s.field}>Amount<input className="input mono" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0 STELX" /></label>
               {amount && !parsed && <p className={s.note}>Enter a positive amount with up to {c.decimals} decimal places.</p>}
+              {tab === "Deposit" && readiness && readiness.balance > 0n && <button className={s.textButton} type="button" onClick={() => setAmount(fmt(readiness.balance))}>Use available balance</button>}
               {tab !== "Deposit" && balance !== null && <button className={s.textButton} type="button" disabled={!relay || balance <= fee} onClick={() => setAmount(fmt(balance > fee ? balance - fee : 0n))}>Use available balance</button>}
             </fieldset>
             {tab === "Deposit" ? (
