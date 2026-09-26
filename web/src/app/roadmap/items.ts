@@ -20,11 +20,12 @@ export interface Note {
   text: string;
 }
 
-export type CategoryId = "privacy" | "payments" | "protocol" | "token";
+export type CategoryId = "privacy" | "payments" | "offramp" | "protocol" | "token";
 
 export const CATEGORIES: { id: CategoryId; name: string; line: string }[] = [
   { id: "privacy", name: "Privacy", line: "Safer, more private, easier to check." },
   { id: "payments", name: "Payments", line: "Moving money, and bringing people in." },
+  { id: "offramp", name: "Off-ramp", line: "From your private balance to money you can spend." },
   { id: "protocol", name: "Protocol", line: "The engine, and the big bets." },
   { id: "token", name: "STELX token", line: "What STELX is for. Privacy itself is never charged in STELX." },
 ];
@@ -139,6 +140,21 @@ export const ITEMS: Item[] = [
     id: "onramp", cat: "payments", status: "building", dev: "Eddy",
     title: "Private on-ramp", line: "Arrive from Base or Arbitrum straight into the pool.",
     milestones: [["Route", false], ["Build", false], ["Live", false]],
+  },
+  {
+    id: "peer-cashin", cat: "payments", status: "next", dev: "Eddy",
+    title: "Cash in with your bank app", line: "Pay a peer with Revolut or Wise and it lands straight in the pool. Works in the UK.",
+    milestones: [["Route tested", false], ["Buy inside STELX", false], ["Lands in the pool", false], ["Real cash-in test", false], ["Live", false]],
+  },
+  {
+    id: "offramp", cat: "offramp", status: "building", dev: "Kaka",
+    title: "Private off-ramp", line: "A one-time Visa for Apple Pay, bought from your private balance. US only to start.",
+    milestones: [["Card partner", false], ["Buy from your private balance", false], ["Card shows in STELX", false], ["Real purchase test", false], ["Live", false]],
+  },
+  {
+    id: "peer-cashout", cat: "offramp", status: "next", dev: "Kaka",
+    title: "Cash out to your bank app", line: "A peer buys your USDC and pays your Revolut or Wise. Works in the UK.",
+    milestones: [["Route tested", false], ["Cash-out account from your phrase", false], ["Offer and withdraw from STELX", false], ["Real cash-out test", false], ["Live", false]],
   },
   {
     id: "merchants", cat: "payments", status: "later", dev: "Rome",
