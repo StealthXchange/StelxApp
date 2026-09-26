@@ -15,6 +15,7 @@ import { shortAddr, usePool, weth } from "@/lib/pool/usePool";
 import { BPS, FEE_BPS } from "@/lib/pool/vendor/wallet";
 import { amountText, ASSETS, formatAmount, parseAmount, readMultiplier, WETH, type Asset } from "@/lib/pool/assets";
 import { AssetPicker } from "@/components/pool/AssetPicker";
+import { ONRAMP_CHAINS } from "@/lib/pool/onrampRoutes";
 
 const FEE_PCT = `${Number(FEE_BPS) / 100}%`;
 const poolFee = (amount: bigint) => (amount * FEE_BPS) / BPS;
@@ -168,7 +169,7 @@ export default function ShieldPage() {
 
         {IS_MAINNET && (
           <Link href="/pool/arrive" className="card" style={{ padding: "14px 22px", display: "flex", justifyContent: "space-between", gap: 12, color: "var(--text-mid)", fontSize: 14 }}>
-            <span>Funds on Base, Arbitrum or Ethereum? Arrive in one transfer, from any wallet or exchange.</span>
+            <span>Funds on another chain? Arrive from any of {ONRAMP_CHAINS.length} chains in one transfer, from any wallet or exchange.</span>
             <span style={{ color: "var(--accent)" }}>→</span>
           </Link>
         )}

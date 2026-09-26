@@ -16,11 +16,17 @@ export async function GET() {
   ]);
   const pairs = (a: string[] | null) => Object.fromEntries((a ?? []).flatMap((v, i, arr) => (i % 2 ? [] : [[v, arr[i + 1]]])));
 
-  const [ideaRows, votes] = await Promise.all([redis<string[]>("HVALS", "rm:ideas"), redis<string[]>("HGETALL", "rm:ideavotes")]);
+  const [ideaRows, votes, replyRows] = await Promise.all([
+    redis<string[]>("HVALS", "rm:ideas"), redis<string[]>("HGETALL", "rm:ideavotes"), redis<string[]>("HVALS", "rm:ideareplies"),
+  ]);
   const voteMap = pairs(votes);
+
+  type Reply = { id: string; idea: string; by: string; at: number; text: string };
+  const replies = new Map<string, Reply[]>();
+  for (const r of parse<Reply>(replyRows).sort((a, b) => a.at - b.at)) replies.set(r.idea, [...(replies.get(r.idea) ?? []), r]);
   const ideas = parse<{ id: string; text: string; from: string; at: number; approved: boolean }>(ideaRows)
     .filter((i) => i.approved || me)
-    .map((i) => ({ ...i, votes: Number(voteMap[i.id] ?? 0) }))
+    .map((i) => ({ ...i, votes: Number(voteMap[i.id] ?? 0), replies: replies.get(i.id) ?? [] }))
     .sort((a, b) => Number(a.approved) - Number(b.approved) || b.votes - a.votes || b.at - a.at);
   const out: Record<string, unknown> = { ready: true, me, notes: parse(notes), ticks: pairs(ticks), status: pairs(status), dev: pairs(dev), ideas };
 

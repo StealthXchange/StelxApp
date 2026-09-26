@@ -15,7 +15,8 @@ const dayOf = (ms: number) => { const d = new Date(ms); return `${d.getUTCDate()
 
 interface LiveNote extends Note { id?: string; at?: number }
 interface Chat { id: string; by: string; at: number; text: string; mentions: string[] }
-interface Idea { id: string; text: string; from: string; at: number; approved: boolean; votes: number }
+interface Reply { id: string; idea: string; by: string; at: number; text: string }
+interface Idea { id: string; text: string; from: string; at: number; approved: boolean; votes: number; replies?: Reply[] }
 interface State {
   ready: boolean; me?: string | null; ideas?: Idea[];
   notes?: { id: string; itemId: string; by: string; at: number; text: string }[];
@@ -188,6 +189,9 @@ function Ideas({ ideas, me, onChange, bare = false }: { ideas: Idea[]; me: strin
   const [busy, setBusy] = useState(false);
   const [voted, setVoted] = useState<Set<string>>(new Set());
 
+  const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [reply, setReply] = useState("");
+
   async function act(fn: () => Promise<unknown>, ok?: string) {
     setBusy(true); setMsg(null);
     try { await fn(); if (ok) setMsg(ok); onChange(); } catch (e) { setMsg(String((e as Error).message)); } finally { setBusy(false); }
@@ -221,8 +225,37 @@ function Ideas({ ideas, me, onChange, bare = false }: { ideas: Idea[]; me: strin
                 {i.from ? `${i.from.startsWith("@") ? "" : "@"}${i.from}` : "anon"} · {dayOf(i.at)}
                 {!i.approved && " · waiting for approval"}
               </div>
+              {(i.replies ?? []).length > 0 && (
+                <div className={s.replies}>
+                  {(i.replies ?? []).map((r) => (
+                    <div key={r.id} className={s.reply}>
+                      <p className={s.replyText}>{r.text}</p>
+                      <div className={s.feedWhen}>
+                        {r.by} · team · {dayOf(r.at)}
+                        {me === r.by && (
+                          <button className={s.linkBtn} disabled={busy} onClick={() => act(() => api("ideas", "POST", { unreply: `${i.id}:${r.id}` }))}>remove</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {me && replyTo === i.id && (
+                <div className={s.replyForm}>
+                  <textarea className={s.textarea} rows={2} maxLength={500} aria-label="Your reply" placeholder="reply as the team…" autoFocus
+                    value={reply} onChange={(e) => setReply(e.target.value)} />
+                  <div className={s.ideaRow}>
+                    <button className={s.post} disabled={busy || !reply.trim()}
+                      onClick={() => act(async () => { await api("ideas", "POST", { reply: i.id, text: reply }); setReply(""); setReplyTo(null); })}>
+                      Reply
+                    </button>
+                    <button className={s.linkBtn} disabled={busy} onClick={() => { setReplyTo(null); setReply(""); }}>cancel</button>
+                  </div>
+                </div>
+              )}
               {me && (
                 <div className={s.ideaTeam}>
+                  {replyTo !== i.id && <button className={s.linkBtn} disabled={busy} onClick={() => { setReplyTo(i.id); setReply(""); }}>reply</button>}
                   {!i.approved && <button className={s.linkBtn} disabled={busy} onClick={() => act(() => api("ideas", "POST", { approve: i.id }))}>approve</button>}
                   <button className={s.linkBtn} disabled={busy} onClick={() => act(() => api("ideas", "POST", { remove: i.id }))}>remove</button>
                 </div>

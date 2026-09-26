@@ -9,6 +9,25 @@ export async function POST(req: Request) {
   const b = await req.json().catch(() => ({}));
   const who = visitor(req);
 
+  if (typeof b.reply === "string" || typeof b.unreply === "string") {
+    const me = await whoami();
+    if (!me) return NextResponse.json({ error: "Team only." }, { status: 401 });
+    if (typeof b.reply === "string") {
+      if (!(await redis<number>("HEXISTS", "rm:ideas", b.reply))) return NextResponse.json({ error: "No such idea." }, { status: 404 });
+      const text = clean(b.text, 500);
+      if (!text) return NextResponse.json({ error: "Empty reply." }, { status: 400 });
+      const id = newId();
+      await redis("HSET", "rm:ideareplies", `${b.reply}:${id}`, JSON.stringify({ id, idea: b.reply, by: me, at: Date.now(), text }));
+      return NextResponse.json({ ok: true });
+    }
+    const raw = await redis<string | null>("HGET", "rm:ideareplies", b.unreply);
+    let mine = false;
+    try { mine = Boolean(raw) && JSON.parse(raw!).by === me; } catch {  }
+    if (!mine) return NextResponse.json({ error: "Not your reply." }, { status: 403 });
+    await redis("HDEL", "rm:ideareplies", b.unreply);
+    return NextResponse.json({ ok: true });
+  }
+
   if (typeof b.approve === "string" || typeof b.remove === "string") {
     const me = await whoami();
     if (!me) return NextResponse.json({ error: "Team only." }, { status: 401 });
@@ -18,6 +37,9 @@ export async function POST(req: Request) {
     if (b.remove) {
       await redis("HDEL", "rm:ideas", id);
       await redis("HDEL", "rm:ideavotes", id);
+
+      const keys = ((await redis<string[]>("HKEYS", "rm:ideareplies")) ?? []).filter((k) => k.startsWith(`${id}:`));
+      if (keys.length) await redis("HDEL", "rm:ideareplies", ...keys);
     } else {
       await redis("HSET", "rm:ideas", id, JSON.stringify({ ...JSON.parse(raw), approved: true, by: me }));
     }

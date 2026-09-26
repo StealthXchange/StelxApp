@@ -208,6 +208,13 @@ button.tick:hover { border-color: var(--r-orange); }
 .ideaTeam { margin-top: 6px; font-family: var(--font-mono), monospace; font-size: 12px; }
 .ideaTeam .linkBtn:first-child { padding-left: 0; }
 
+.replies { margin-top: 10px; display: grid; gap: 10px; }
+.reply { border-left: 2px solid var(--r-orange); padding-left: 12px; }
+.replyText { margin: 0 0 2px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.replyForm { margin-top: 10px; }
+.replyForm .ideaRow { align-items: center; }
+.replyForm .linkBtn { font-family: var(--font-mono), monospace; font-size: 12px; }
+
 .login { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin: 4px 0 0; }
 .login .input { flex: 0 1 220px; }
 
