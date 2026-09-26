@@ -131,7 +131,7 @@ export const ITEMS: Item[] = [
   },
   {
     id: "ultimate", cat: "payments", status: "next", dev: "Rome",
-    title: "Ultimate mode", line: "Out of STELX and straight into a private pool on another chain. No wallet of yours at either end.",
+    title: "Dark Mode", line: "Out of STELX and straight into a private pool on another chain. No wallet of yours at either end.",
     milestones: [["Pay anywhere live", false], ["Route into a private pool on the other side", false], ["Common amounts and timing, by default", false], ["Split big payments", false], ["Live", false]],
     notes: [{ date: "24 Sep", by: "Rome", text: "next step after pay anywhere. instead of landing in a normal wallet on base or arbitrum, it lands straight in a privacy pool there. round amounts, a bit of waiting and splitting big ones make it much harder to match up" }],
   },
