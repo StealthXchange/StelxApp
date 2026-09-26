@@ -5,7 +5,8 @@ export const PAY_FROM = {
   decimals: 6,
 } as const;
 
-import { isAddress } from "viem";
+import { isAddress, type Address } from "viem";
+import { mnemonicToAccount } from "viem/accounts";
 
 export interface PayChain { id: number; name: string; vm: "evm" | "svm"; usdc: string; explorer: string }
 
@@ -49,3 +50,20 @@ export const payChain = (id: number) => PAY_CHAINS.find((c) => c.id === id);
 export const PAY_FEE = { bps: 25, recipient: "0xE0d43ceA8c9a069f41D4Ce39126167532Dac2CAC" } as const;
 
 export const PAY_MAX = 10_000n * 10n ** 6n;
+
+export const FIRST_REFUND_INDEX = 1;
+
+export const MAX_REFUND_INDEX = 0x7fffffff;
+
+export const refundAddress = (phrase: string, index: number): Address => {
+  if (!Number.isInteger(index) || index < FIRST_REFUND_INDEX || index > MAX_REFUND_INDEX) throw new RangeError("bad refund index");
+  return mnemonicToAccount(phrase.trim().replace(/\s+/g, " "), { addressIndex: index }).address;
+};
+
+export async function nextRefundIndex(recorded: Set<number>, used: (index: number) => Promise<boolean>): Promise<number> {
+  for (let i = FIRST_REFUND_INDEX; i <= MAX_REFUND_INDEX; i++) {
+    if (recorded.has(i)) continue;
+    if (!(await used(i))) return i;
+  }
+  throw new Error("no refund address left");
+}

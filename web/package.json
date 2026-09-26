@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "verify:gift": "node --test scripts/check-gift.ts",
+    "verify:pay": "node --test scripts/check-pay.ts",
     "predev": "node scripts/sync-pool.mjs",
     "prebuild": "node scripts/sync-pool.mjs"
   },

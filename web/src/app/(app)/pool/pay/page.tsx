@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { mnemonicToAccount } from "viem/accounts";
 import { refusedBeforeSending, waitForSpent, type Outcome } from "@/lib/pool/outcome";
 import { BROADCASTERS } from "@/lib/pool/config";
 import { refresh, revealSeed } from "@/lib/pool/walletStore";
@@ -17,6 +16,9 @@ import { ProvingPanel } from "@/components/pool/ProvingPanel";
 import { AmountField } from "@/components/pool/AmountField";
 import { ChainPicker } from "@/components/pool/ChainPicker";
 import { PAY_CHAINS, PAY_FEE, PAY_FROM, PAY_MAX, payChain, validRecipient } from "@/lib/pool/payRoutes";
+import { allocateRefund, saveRefund } from "@/lib/pool/payRefunds";
+
+type Refund = { index: number; address: `0x${string}` };
 
 interface Quote {
   requestId: `0x${string}`;
@@ -55,6 +57,9 @@ export default function PayAnywherePage() {
   const [hash, setHash] = useState<string | null>(null);
   const [result, setResult] = useState<Outcome | null>(null);
   const [delivery, setDelivery] = useState<{ status: string; tx?: string } | null>(null);
+
+  const [refund, setRefund] = useState<Refund | null>(null);
+  const [paidRefund, setPaidRefund] = useState<Refund | null>(null);
   const seed = revealSeed();
   const { state, build, reset, setSubmitting } = useProver(seed);
   const health = usePoolHealth();
@@ -78,13 +83,15 @@ export default function PayAnywherePage() {
   const feeOk = fee === 0n;
   const ready = Boolean(usdg && validTo && parsed && parsed > 0n && parsed <= PAY_MAX && enough && broadcaster && feeOk && health.status === "ok");
 
-  const refundTo = useMemo(() => { try { return seed ? mnemonicToAccount(seed).address : null; } catch { return null; } }, [seed]);
-
   async function getQuote(): Promise<Quote | null> {
-    if (!ready || arriving === null || !refundTo) return null;
+    if (!ready || arriving === null || !seed || !pool.address) return null;
     setQuoting(true); setErr(null);
     try {
-      const q = await post("/api/pay/quote", { chainId, recipient: to.trim(), amount: arriving.toString(), refundTo });
+      const r = refund ?? await allocateRefund(seed, pool.address);
+      setRefund(r);
+      const q = await post("/api/pay/quote", { chainId, recipient: to.trim(), amount: arriving.toString(), refundTo: r.address });
+
+      saveRefund(pool.address, { index: r.index, requestId: q.requestId, chainId, at: Date.now() });
       const fresh = { ...q, at: Date.now() } as Quote;
       setQuote(fresh);
       return fresh;
@@ -102,6 +109,9 @@ export default function PayAnywherePage() {
   async function submit() {
     if (!state.tx || !broadcaster || !quote) return;
     setSubmitting();
+
+    setPaidRefund(refund);
+    setRefund(null);
     try {
       const h = await submitViaBroadcaster(broadcaster, state.tx as never);
       setHash(h);
@@ -144,7 +154,7 @@ export default function PayAnywherePage() {
   const deliveredLabel =
     delivery?.status === "success" ? `Delivered on ${chain.name}`
     : delivery?.status === "failure" ? "Relay couldn't deliver it"
-    : delivery?.status === "refund" || delivery?.status === "refunded" ? "Refunded to your refund address"
+    : delivery?.status === "refund" || delivery?.status === "refunded" ? "Refunded on Robinhood Chain"
     : `On its way to ${chain.name}`;
 
   return (
@@ -196,7 +206,7 @@ export default function PayAnywherePage() {
 
         <p className="hint" style={{ marginTop: 12 }}>
           This leaves the pool like a withdrawal: the amount and where it goes are public, but not that it was you.
-          Relay bridges it and holds it for a few seconds. If it can&apos;t deliver, it refunds to an address from your 12 words.
+          Relay bridges it and holds it for a few seconds. If it can&apos;t deliver, it refunds to a fresh address from your 12 words, a new one for every payment.
         </p>
       </div>
 
@@ -219,6 +229,12 @@ export default function PayAnywherePage() {
             <span>{deliveredLabel}</span>
             <span>{delivery.status === "success" ? "✓" : "…"}</span>
           </div>
+          {(delivery.status === "refund" || delivery.status === "refunded") && paidRefund && (
+            <p className="hint">
+              The USDG went back to {paidRefund.address}: Account {paidRefund.index + 1} when you import your 12 words
+              into a wallet such as MetaMask or Rabby. It needs a little ETH on Robinhood Chain to move.
+            </p>
+          )}
           {delivery.tx && delivery.status === "success" && (
             <a className="hint" href={`${chain.explorer}/tx/${delivery.tx}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
               View on {chain.name}
