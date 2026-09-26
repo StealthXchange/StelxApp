@@ -10,6 +10,7 @@
     "verify:gift": "node --test scripts/check-gift.ts",
     "verify:pay": "node --test scripts/check-pay.ts",
     "verify:onramp": "node --test scripts/check-onramp.ts",
+    "verify:dark": "node --test scripts/check-dark.ts",
     "predev": "node scripts/sync-pool.mjs",
     "prebuild": "node scripts/sync-pool.mjs"
   },
