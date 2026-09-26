@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAddress, isAddress } from "viem";
 import {
-  arrivesAs, GAS_TOPUP_USD, ONRAMP_MAX_USD, ONRAMP_MIN_SLACK, ONRAMP_MIN_USD, ONRAMP_RECHECK, ONRAMP_TO, onrampChain, originCurrency, quoteProblem, usdIn,
+  arrivesAs, GAS_TOPUP_USD, ONRAMP_MAX_USD, ONRAMP_MIN_SLACK, ONRAMP_MIN_USD, ONRAMP_TO, onrampChain, originCurrency, quoteProblem, usdIn,
   type OnrampAsset,
 } from "@/lib/pool/onrampRoutes";
 import { validRecipient } from "@/lib/pool/payRoutes";
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       recipient,
       refundTo: b.refundTo,
 
-      ...(chain.vm === "svm" || ONRAMP_RECHECK.has(chain.id) ? { recoveryAddress: b.refundTo } : {}),
+      recoveryAddress: b.refundTo,
       originChainId: chain.id,
       destinationChainId: ONRAMP_TO.chainId,
       originCurrency: originCurrency(chain, asset),

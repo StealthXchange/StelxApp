@@ -62,6 +62,8 @@ const recheck = (chainId: number, depositAddress: string) =>
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
+const WITHDRAW = <a href="https://relay.link/withdraw" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>relay.link/withdraw</a>;
+
 type Phase = "waiting" | "bridging" | "landed" | "depositing" | "done" | "refunded" | "failed";
 
 export default function ArrivePage() {
@@ -272,7 +274,7 @@ export default function ArrivePage() {
   return (
     <div className="pane">
       <h1 className="pane-title">Arrive from another chain</h1>
-      <p className="hint">USDC from {ONRAMP_CHAINS.length} chains, Solana included, or ETH, into your pool in one transfer. From any wallet or exchange.</p>
+      <p className="hint">USDC from {ONRAMP_CHAINS.length} chains, Solana included, or ETH or SOL, into your pool in one transfer. From any wallet or exchange.</p>
       {err && <p className="hint warn">{err}</p>}
       {swept > 0n && <p className="hint">Swept {eth(swept)} ETH of leftover gas into your balance.</p>}
 
@@ -292,7 +294,7 @@ export default function ArrivePage() {
             <span className="hint" style={{ textAlign: "left" }}>
               {asset === "usdc" ? "Arrives in the pool as USDG, one for one less fees."
                 : arrivesAs(chain, asset) === "eth" ? "Arrives in the pool as WETH, less a little kept for gas."
-                : `Swapped to USDG on the way, at Relay's rate.`}
+                : `Swapped to USDG on the way, at Relay's rate. At least $${ONRAMP_MIN_USD} of ${symbol} at Relay's price.`}
             </span>
           </div>
 
@@ -345,16 +347,28 @@ export default function ArrivePage() {
                 {fromChain.vm === "svm" ? (
                   <>
                     <span className="hint warn" style={{ textAlign: "left" }}>
-                      Only USDC on Solana, the token with mint {short(fromChain.usdc)}. Another token or network won&apos;t arrive.
+                      {inAsset === "usdc"
+                        ? <>Only USDC on Solana, the token with mint {short(fromChain.usdc)}.</>
+                        : <>Only SOL on Solana, sent as plain SOL, not wrapped SOL.</>}
                     </span>
                     <span className="hint" style={{ textAlign: "left" }}>
                       Send it from any Solana wallet, or withdraw it from an exchange on the Solana network. No memo needed.
                     </span>
+                    <span className="hint" style={{ textAlign: "left" }}>
+                      Sent another token? If Relay takes it on Solana, as it does {inAsset === "usdc" ? "SOL and USDT" : "USDC and USDT"},
+                      reclaim it at {WITHDRAW} with this arrival&apos;s Solana key, under Earlier arrivals. Any other token is lost.
+                    </span>
                   </>
                 ) : !ONRAMP_RECHECK.has(fromChain.id) && (
-                  <span className="hint warn" style={{ textAlign: "left" }}>
-                    Only {inUnit} on {fromChain?.name}. Another token or chain won&apos;t arrive.
-                  </span>
+                  <>
+                    <span className="hint warn" style={{ textAlign: "left" }}>
+                      Only {inUnit} on {fromChain.name}.
+                    </span>
+                    <span className="hint" style={{ textAlign: "left" }}>
+                      Sent another token, or on another network? If Relay takes it there, reclaim it at {WITHDRAW} with this
+                      arrival&apos;s key, under Earlier arrivals. Any other token is lost.
+                    </span>
+                  </>
                 )}
                 {ONRAMP_RECHECK.has(fromChain.id) && (
                   <>
@@ -364,9 +378,8 @@ export default function ArrivePage() {
                     </span>
                     <span className="hint" style={{ textAlign: "left" }}>
                       Sent the gas coin anyway? This page asks Relay to look again after a minute. Anything Relay can&apos;t deliver is
-                      refunded to your landing address on {fromChain.name}, or can be reclaimed at{" "}
-                      <a href="https://relay.link/withdraw" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>relay.link/withdraw</a>{" "}
-                      with its key, under Earlier arrivals.
+                      refunded to your landing address on {fromChain.name}, or can be reclaimed at {WITHDRAW} with its key, under
+                      Earlier arrivals.
                     </span>
                   </>
                 )}
@@ -454,10 +467,8 @@ export default function ArrivePage() {
                   )}
                   <span style={{ color: "var(--amber)" }}>
                     {c?.vm === "svm"
-                      ? "Anyone with these keys can take what's on these addresses. Import one into a wallet (the Solana key into a Solana wallet such as Phantom) only to move a refund, or to reclaim a stuck deposit at relay.link/withdraw."
-                      : c && ONRAMP_RECHECK.has(c.id)
-                        ? "Anyone with this key can take what's on this address, on every chain. Import it into a wallet only to move a refund, or to reclaim a stuck deposit at relay.link/withdraw."
-                        : "Anyone with this key can take what's on this address, on every chain. Import it into a wallet only to move a refund."}
+                      ? "Anyone with these keys can take what's on these addresses. Import one into a wallet (the Solana key into a Solana wallet such as Phantom) only to move a refund, or to reclaim a stuck deposit at relay.link/withdraw, which needs a little SOL on the refund address for fees."
+                      : `Anyone with this key can take what's on this address, on every chain. Import it into a wallet only to move a refund, or to reclaim a stuck deposit at relay.link/withdraw, which needs a little gas on this address on ${c ? c.name : "the chain paid from"}.`}
                   </span>
                 </div>
               ) : (

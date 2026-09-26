@@ -12,7 +12,16 @@ export const ONRAMP_TO = {
 
 export const NATIVE = "0x0000000000000000000000000000000000000000";
 
-export interface NativeRoute { symbol: string; arrivesAs: "eth" | "usdg" }
+export interface NativeRoute {
+  symbol: string;
+  arrivesAs: "eth" | "usdg";
+
+  address?: string;
+
+  decimals?: number;
+}
+
+const SYSTEM_PROGRAM = "11111111111111111111111111111111";
 
 export interface OnrampChain extends PayChain {
 
@@ -27,7 +36,7 @@ const EXTRA: Record<number, Pick<OnrampChain, "usdcDecimals" | "native">> = {
   10: { usdcDecimals: 6, native: ETH },
   1: { usdcDecimals: 6, native: ETH },
 
-  792703809: { usdcDecimals: 6, native: null },
+  792703809: { usdcDecimals: 6, native: { symbol: "SOL", arrivesAs: "usdg", address: SYSTEM_PROGRAM, decimals: 9 } },
   137: { usdcDecimals: 6, native: null },
   56: { usdcDecimals: 18, native: { symbol: "BNB", arrivesAs: "usdg" } },
   43114: { usdcDecimals: 6, native: null },
@@ -58,8 +67,8 @@ export const onrampChain = (id: number) => ONRAMP_CHAINS.find((c) => c.id === id
 export type OnrampAsset = "usdc" | "native";
 
 export const assetSymbol = (c: OnrampChain, a: OnrampAsset) => (a === "usdc" ? "USDC" : c.native?.symbol ?? "");
-export const assetDecimals = (c: OnrampChain, a: OnrampAsset) => (a === "usdc" ? c.usdcDecimals : 18);
-export const originCurrency = (c: OnrampChain, a: OnrampAsset) => (a === "usdc" ? c.usdc : NATIVE);
+export const assetDecimals = (c: OnrampChain, a: OnrampAsset) => (a === "usdc" ? c.usdcDecimals : c.native?.decimals ?? 18);
+export const originCurrency = (c: OnrampChain, a: OnrampAsset) => (a === "usdc" ? c.usdc : c.native?.address ?? NATIVE);
 
 export const arrivesAs = (c: OnrampChain, a: OnrampAsset): "usdg" | "eth" => (a === "usdc" ? "usdg" : c.native?.arrivesAs ?? "usdg");
 
@@ -97,7 +106,7 @@ function check(j: RelayQuote, chain: OnrampChain, asset: OnrampAsset, amount: bi
   if (steps.length !== 1) return "not a single deposit step";
   const deposit = steps[0].depositAddress;
   if (chain.vm === "svm") {
-    const problem = solanaDepositProblem(j, chain, amount);
+    const problem = solanaDepositProblem(j, chain, asset, amount);
     if (problem) return problem;
   } else {
     const tx = steps[0].items?.[0]?.data;
@@ -131,7 +140,6 @@ function check(j: RelayQuote, chain: OnrampChain, asset: OnrampAsset, amount: bi
 
 const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 const ATA_PROGRAM = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
-const SYSTEM_PROGRAM = "11111111111111111111111111111111";
 const COMPUTE_BUDGET = "ComputeBudget111111111111111111111111111111";
 
 function solanaKey(s: unknown): Uint8Array | null {
@@ -155,8 +163,11 @@ export function associatedTokenAccount(owner: string, mint: string): string {
 }
 
 const u64le = (hex: string) => BigInt(`0x${hex.match(/../g)!.reverse().join("")}`);
+const keys = (ix: SolanaInstruction) => (ix.keys ?? []).map((k) => k.pubkey);
 
-function solanaDepositProblem(j: RelayQuote, chain: OnrampChain, amount: bigint): string | null {
+const budget = (ix: SolanaInstruction) => ix.programId === COMPUTE_BUDGET && keys(ix).length === 0;
+
+function solanaDepositProblem(j: RelayQuote, chain: OnrampChain, asset: OnrampAsset, amount: bigint): string | null {
   const step = j.steps![0];
   const deposit = step.depositAddress;
   if (!solanaKey(deposit)) return "no deposit address";
@@ -165,11 +176,28 @@ function solanaDepositProblem(j: RelayQuote, chain: OnrampChain, amount: bigint)
   if (items.length !== 1 || !Array.isArray(ixs)) return "no deposit address";
   const cin = j.details?.currencyIn;
   if (Number(cin?.currency?.chainId) !== chain.id) return "deposit on the wrong chain";
-  if (cin?.currency?.address !== chain.usdc) return "deposit is not a USDC transfer";
+  if (cin?.currency?.address !== originCurrency(chain, asset)) return `deposit is not a ${assetSymbol(chain, asset)} transfer`;
   if (BigInt(cin?.amount ?? -1) !== amount) return "deposit amount differs";
+  return asset === "usdc" ? usdcDepositProblem(ixs, chain, deposit!, amount) : solDepositProblem(ixs, deposit!, amount);
+}
 
-  const into = associatedTokenAccount(deposit!, chain.usdc);
-  const keys = (ix: SolanaInstruction) => (ix.keys ?? []).map((k) => k.pubkey);
+function solDepositProblem(ixs: SolanaInstruction[], deposit: string, amount: bigint): string | null {
+  const transfers = ixs.filter((ix) => ix.programId === SYSTEM_PROGRAM);
+  if (transfers.length !== 1) return "deposit is not one SOL transfer";
+  const t = transfers[0];
+  const data = String(t.data ?? "").toLowerCase();
+
+  if (!/^02000000[0-9a-f]{16}$/.test(data)) return "deposit is not a SOL transfer";
+
+  const [from, to, ...rest] = keys(t);
+  if (rest.length || !solanaKey(from) || from === deposit) return "deposit is not a SOL transfer";
+  if (to !== deposit) return "transfer goes elsewhere";
+  if (u64le(data.slice(8)) !== amount) return "deposit amount differs";
+  return ixs.every((ix) => ix === t || budget(ix)) ? null : "deposit does something else";
+}
+
+function usdcDepositProblem(ixs: SolanaInstruction[], chain: OnrampChain, deposit: string, amount: bigint): string | null {
+  const into = associatedTokenAccount(deposit, chain.usdc);
   const transfers = ixs.filter((ix) => ix.programId === TOKEN_PROGRAM);
   if (transfers.length !== 1) return "deposit is not one USDC transfer";
   const t = transfers[0];
@@ -192,8 +220,7 @@ function solanaDepositProblem(j: RelayQuote, chain: OnrampChain, amount: bigint)
   if (sent !== amount) return "deposit amount differs";
 
   for (const ix of ixs) {
-    if (ix === t) continue;
-    if (ix.programId === COMPUTE_BUDGET && keys(ix).length === 0) continue;
+    if (ix === t || budget(ix)) continue;
     if (ix.programId !== ATA_PROGRAM) return "deposit does something else";
 
     const [, account, holder, mint, system, token, ...rest] = keys(ix);
